@@ -742,9 +742,7 @@ def main():
                     cv2.destroyAllWindows()
                     sys.exit(1)
                 tracker.finalizeTemplates()
-                tracker.initFromEmbedding(
-                    bbox, tracker.getTemplateEmbedding(0), (width, height)
-                )
+                tracker.init(frame, bbox)
                 tracking_active = True
                 nano_calibrating = False
                 nano_calib_done  = True
@@ -929,11 +927,10 @@ def main():
                     # (Re-)initialise the OpenCV tracker from this detection
                     if use_tracker:
                         if nano_calib_done:
-                            # Calibrated recovery: reuse frozen embeddings — never
-                            # add new templates or call finalizeTemplates again.
-                            tracker.initFromEmbedding(
-                                bbox, tracker.getTemplateEmbedding(0), (width, height)
-                            )
+                            # Re-initialize tracker from the current YOLO detection.
+                            # This re-encodes the template from the current frame,
+                            # keeping the template fresh as the ball changes appearance.
+                            tracker.init(frame, bbox)
                             tracking_active = True
                         else:
                             tracker = CamShiftTracker(bank)

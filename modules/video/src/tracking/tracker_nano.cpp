@@ -148,6 +148,9 @@ protected:
     TrackerNano::Params params;
     trackerConfig trackState;
     int scoreSize;
+    bool scoreSizeProbed = false;
+
+    void probeScoreSize();
     Size imgSize = {0, 0};
     Mat hanningWindow;
     Mat grid2searchX, grid2searchY;
@@ -205,9 +208,43 @@ void TrackerNanoImpl::generateGrids()
     grid2searchY += instanceSize/2;
 }
 
+void TrackerNanoImpl::probeScoreSize()
+{
+    if (scoreSizeProbed)
+        return;
+
+    // Run the actual backbone on dummy images to get correct feature shapes,
+    // then run neckhead to detect the output score map size.
+    // This handles any NanoTrack version (V2=16×16, V3=15×15, etc.)
+    Mat dummyTemplateImg = Mat::zeros(exemplarSize, exemplarSize, CV_8UC3);
+    Mat dummySearchImg = Mat::zeros(instanceSize, instanceSize, CV_8UC3);
+
+    Mat blobT = dnn::blobFromImage(dummyTemplateImg, 1.0, Size(), Scalar(), trackState.swapRB);
+    backbone.setInput(blobT);
+    Mat tmplFeat = backbone.forward();
+
+    Mat blobS = dnn::blobFromImage(dummySearchImg, 1.0, Size(), Scalar(), trackState.swapRB);
+    backbone.setInput(blobS);
+    Mat searchFeat = backbone.forward();
+
+    neckhead.setInput(tmplFeat, "input1");
+    neckhead.setInput(searchFeat, "input2");
+    std::vector<String> outNames = {"output1"};
+    std::vector<Mat> outs;
+    neckhead.forward(outs, outNames);
+
+    // output1 shape is [1, 2, scoreSize, scoreSize]
+    int totalElements = (int)outs[0].total();
+    scoreSize = (int)std::sqrt(totalElements / 2);  // 2 channels
+    scoreSizeProbed = true;
+
+    fprintf(stderr, "[TrackerNano::probeScoreSize] Detected scoreSize=%d from neckhead output (%d elements)\n",
+        scoreSize, totalElements);
+}
+
 void TrackerNanoImpl::initState(const Rect& boundingBox, const Size& imageSize)
 {
-    scoreSize = (instanceSize - exemplarSize) / trackState.totalStride + 8;
+    probeScoreSize();
     trackState = trackerConfig();
 
     // convert Rect from left-top to center.
@@ -291,15 +328,10 @@ void TrackerNanoImpl::initFromEmbedding(const Rect& boundingBox, InputArray embe
     neckhead.setInput(templateEmbeddings[0], "input1");
     calibrationFinalized = true;
 
-    if (!frozenSzInitialized)
-    {
-        // First init (after calibration or fresh) — set frozen size from the provided bbox
-        frozenTargetSz = targetSz;
-        frozenSzInitialized = true;
-    }
-    // else: recovery path — keep the original calibration frozenTargetSz,
-    // only update position. This prevents YOLO's inconsistent bbox sizes
-    // from corrupting the frozen size during fast motion.
+    // Always update frozen size from the YOLO bbox — it's more accurate
+    // than keeping a stale calibration size as the ball changes apparent size.
+    frozenTargetSz = targetSz;
+    frozenSzInitialized = true;
 
     posHistory.clear();
     posHistory.push_back(Point2f(targetPos[0], targetPos[1]));
