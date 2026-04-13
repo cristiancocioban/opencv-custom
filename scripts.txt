@@ -1,0 +1,42 @@
+cmake -G "Visual Studio 16 2019" ` -D CMAKE_BUILD_TYPE=Release ` -D BUILD_opencv_python3=ON ` -D PYTHON3_EXECUTABLE=C:/Users/crist/anaconda3/envs/bskt_tracker/python.exe ` -D PYTHON3_INCLUDE_DIR=C:/Users/crist/anaconda3/envs/bskt_tracker/include ` -D PYTHON3_LIBRARY=C:/Users/crist/anaconda3/envs/bskt_tracker/libs/python311.lib ` -D PYTHON3_NUMPY_INCLUDE_DIRS=C:/Users/crist/anaconda3/envs/bskt_tracker/Lib/site-packages/numpy/_core/include ` -D BUILD_EXAMPLES=OFF ` -D BUILD_TESTS=OFF ` -D BUILD_PERF_TESTS=OFF ` ..
+
+cmake --build . --config Release
+
+
+python ball_tracker.py --video videos/test_video_shoot.mp4 --tracker nano --nano-backbone models/nanotrack_backbone_sim.onnx --nano-neckhead models/nanotrack_head_sim.onnx --num-templates 5  --calibration-frames 10 --yolo-periodic 10 --no-template-validation
+
+python ball_tracker.py --video videos/test_video_shoot.mp4 
+
+
+# VitTrack with calibration (same flags as nano)
+python ball_tracker.py --video videos/test_video_shoot.mp4 `
+  --tracker vittrack `
+  --vittrack-model models/object_tracking_vittrack_2023sep.onnx `
+  --num-templates 5 --calibration-frames 100 `
+  --no-template-validation --yolo-periodic 10 `
+  --confidence-threshold 0.15
+
+# NanoTrack (unchanged)
+python ball_tracker.py --video videos/test_video_shoot.mp4 `
+  --tracker nano `
+  --nano-backbone models/nanotrack_backbone_sim.onnx `
+  --nano-neckhead models/nanotrack_head_sim.onnx `
+  --num-templates 5 --calibration-frames 100 `
+  --no-template-validation --yolo-periodic 10 `
+  --confidence-threshold 0.8
+
+python ball_tracker.py --video videos/test_video_shoot.mp4 `
+  --tracker nano `
+  --nano-backbone models/nanotrack_backbone_sim.onnx `
+  --nano-neckhead models/nanotrack_head_sim.onnx `
+  --num-templates 5 --calibration-frames 10 `
+  --yolo-periodic 10 --no-template-validation `
+  --search-crops 5 --early-exit-score 0.85 --motion-history 5
+
+python ball_tracker.py --video videos/test_dribble.mp4 `
+  --tracker nano `
+  --nano-backbone models/nanotrack_backbone_sim.onnx `
+  --nano-neckhead models/nanotrack_head_sim.onnx `
+  --num-templates 5 --calibration-frames 10 `
+  --yolo-periodic 10 --no-template-validation `
+  --search-crops 2 --early-exit-score 0.85 --motion-history 5

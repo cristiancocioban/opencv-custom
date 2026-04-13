@@ -984,6 +984,10 @@ public:
         CV_PROP_RW std::string neckhead;
         CV_PROP_RW int backend;
         CV_PROP_RW int target;
+        CV_PROP_RW int maxTemplates; //!< Maximum number of templates (0 = unlimited, minimum 1 when finalized)
+        CV_PROP_RW int searchCrops;    //!< Max search crops per frame (1=single center, 5=full multi-crop, default 5)
+        CV_PROP_RW float earlyExitScore; //!< Raw classifier threshold to accept a crop immediately (default 0.85)
+        CV_PROP_RW int motionHistory;  //!< Number of recent positions for velocity estimation (default 5)
     };
 
     /** @brief Constructor
@@ -1004,6 +1008,40 @@ public:
     /** @brief Return tracking score
     */
     CV_WRAP virtual float getTrackingScore() = 0;
+
+    /** @brief Initialize tracker from a pre-computed template embedding instead of encoding from a frame.
+    @param boundingBox Initial bounding box of the target (used for position/size state)
+    @param embedding Pre-computed backbone embedding of the template
+    @param imageSize Size of the images that will be passed to update()
+    */
+    CV_WRAP virtual void initFromEmbedding(const Rect& boundingBox, InputArray embedding, const Size& imageSize) = 0;
+
+    /** @brief Add a template from a raw image frame during calibration.
+    Crops the target region and encodes it through the backbone.
+    @param image Input image containing the target
+    @param boundingBox Bounding box of the target in this image
+    */
+    CV_WRAP virtual void addTemplate(InputArray image, const Rect& boundingBox) = 0;
+
+    /** @brief Add a pre-computed backbone embedding as a template during calibration.
+    @param embedding Pre-computed backbone feature tensor
+    */
+    CV_WRAP virtual void addTemplateEmbedding(InputArray embedding) = 0;
+
+    /** @brief Signal that calibration is done and tracking can begin.
+    Must be called after addTemplate()/addTemplateEmbedding() and before update().
+    Requires at least one template to have been added.
+    */
+    CV_WRAP virtual void finalizeTemplates() = 0;
+
+    /** @brief Retrieve a stored template embedding by index.
+    @param idx Index of the template (0-based, default 0)
+    */
+    CV_WRAP virtual Mat getTemplateEmbedding(int idx = 0) const = 0;
+
+    /** @brief Return the number of stored template embeddings.
+    */
+    CV_WRAP virtual int getTemplateCount() const = 0;
 
     //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
@@ -1031,6 +1069,7 @@ public:
         CV_PROP_RW Scalar meanvalue;
         CV_PROP_RW Scalar stdvalue;
         CV_PROP_RW float tracking_score_threshold;
+        CV_PROP_RW int maxTemplates; //!< Maximum number of templates (0 = unlimited, minimum 1 when finalized)
     };
 
     /** @brief Constructor
@@ -1054,6 +1093,38 @@ public:
     /** @brief Return tracking score
     */
     CV_WRAP virtual float getTrackingScore() = 0;
+
+    /** @brief Initialize tracker from a pre-computed template blob instead of encoding from a frame.
+    @param boundingBox Initial bounding box of the target (used for position/size state)
+    @param templateBlob Pre-computed preprocessed template blob
+    @param imageSize Size of the images that will be passed to update()
+    */
+    CV_WRAP virtual void initFromEmbedding(const Rect& boundingBox, InputArray templateBlob, const Size& imageSize) = 0;
+
+    /** @brief Add a template from a raw image frame during calibration.
+    @param image Input image containing the target
+    @param boundingBox Bounding box of the target in this image
+    */
+    CV_WRAP virtual void addTemplate(InputArray image, const Rect& boundingBox) = 0;
+
+    /** @brief Add a pre-computed template blob directly during calibration.
+    @param templateBlob Pre-computed preprocessed template blob
+    */
+    CV_WRAP virtual void addTemplateEmbedding(InputArray templateBlob) = 0;
+
+    /** @brief Signal that calibration is done and tracking can begin.
+    Must be called after addTemplate()/addTemplateEmbedding() and before update().
+    */
+    CV_WRAP virtual void finalizeTemplates() = 0;
+
+    /** @brief Retrieve a stored template blob by index.
+    @param idx Index of the template (0-based, default 0)
+    */
+    CV_WRAP virtual Mat getTemplateEmbedding(int idx = 0) const = 0;
+
+    /** @brief Return the number of stored template embeddings.
+    */
+    CV_WRAP virtual int getTemplateCount() const = 0;
 
     // void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
