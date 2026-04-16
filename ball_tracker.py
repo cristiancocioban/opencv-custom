@@ -325,9 +325,24 @@ def parse_args():
         help="Path to the input video file"
     )
     parser.add_argument(
-        "--yolo-model",
-        default="models/ball_detection_v26n_640_07_04.pt",
-        help="Path to the YOLO .pt model file"
+        "--yolo-model-calibration",
+        default=None,
+        help="Path to the YOLO model used during the calibration phase. "
+             "If not provided, calibration is skipped."
+    )
+    parser.add_argument(
+        "--yolo-imgsz-calibration", type=int, default=640,
+        help="Input image size for the calibration YOLO model (default: 640)"
+    )
+    parser.add_argument(
+        "--yolo-model-detection",
+        default=None,
+        help="Path to the YOLO model used during the detection/tracking phase. "
+             "If not provided, YOLO detection is disabled."
+    )
+    parser.add_argument(
+        "--yolo-imgsz-detection", type=int, default=640,
+        help="Input image size for the detection YOLO model (default: 640)"
     )
     parser.add_argument(
         "--tracker", choices=["vittrack", "nano", "camshift"], default="vittrack",
@@ -411,6 +426,18 @@ def parse_args():
         "--motion-history", type=int, default=5,
         help="(nano only) Number of recent positions for velocity estimation "
              "(default: 5)."
+    )
+    parser.add_argument(
+        "--no-motion-mask", action="store_true",
+        help="Disable the motion green screen preprocessing. When set, YOLO "
+             "receives the raw frame instead of the background-subtracted frame."
+    )
+    parser.add_argument(
+        "--media-pipe",
+        default=None,
+        help="Path to a MediaPipe ObjectDetector .tflite model file. "
+             "When provided, MediaPipe detections are drawn as CYAN bounding "
+             "boxes on the output alongside the normal tracking overlay."
     )
     parser.add_argument(
         "--max-bbox-area", type=float, default=0.15,
@@ -551,10 +578,38 @@ def main():
         print(f"[ERROR] Video file not found: {video_path}", file=sys.stderr)
         sys.exit(1)
 
-    yolo_model_path = Path(args.yolo_model)
-    if not yolo_model_path.exists():
-        print(f"[ERROR] YOLO model not found: {yolo_model_path}", file=sys.stderr)
-        sys.exit(1)
+    yolo_calib_path = None
+    if args.yolo_model_calibration is not None:
+        yolo_calib_path = Path(args.yolo_model_calibration)
+        if not yolo_calib_path.exists():
+            print(f"[ERROR] YOLO calibration model not found: {yolo_calib_path}", file=sys.stderr)
+            sys.exit(1)
+
+    yolo_detect_path = None
+    if args.yolo_model_detection is not None:
+        yolo_detect_path = Path(args.yolo_model_detection)
+        if not yolo_detect_path.exists():
+            print(f"[ERROR] YOLO detection model not found: {yolo_detect_path}", file=sys.stderr)
+            sys.exit(1)
+
+    # ---- MediaPipe Object Detector (optional) --------------------------------
+    mp_detector = None
+    mp = None
+    if args.media_pipe is not None:
+        mp_model_path = Path(args.media_pipe)
+        if not mp_model_path.exists():
+            print(f"[ERROR] MediaPipe model not found: {mp_model_path}", file=sys.stderr)
+            sys.exit(1)
+        import mediapipe as mp
+        from mediapipe.tasks.python import vision as mp_vision
+        from mediapipe.tasks.python import BaseOptions as MpBaseOptions
+        mp_options = mp_vision.ObjectDetectorOptions(
+            base_options=MpBaseOptions(model_asset_path=str(mp_model_path)),
+            max_results=10,
+            score_threshold=0.3,
+        )
+        mp_detector = mp_vision.ObjectDetector.create_from_options(mp_options)
+        print(f"[INFO] MediaPipe ObjectDetector loaded: {mp_model_path}")
 
     # Resolve tracker model paths based on chosen tracker type
     vittrack_model_path = None
@@ -598,9 +653,21 @@ def main():
     # ---- Output path -------------------------------------------------------
     output_path = video_path.with_name(video_path.stem + "_tracked" + video_path.suffix)
 
-    # ---- Load YOLO model ---------------------------------------------------
-    print(f"[INFO] Loading YOLO model: {yolo_model_path}")
-    yolo_model = YOLO(str(yolo_model_path))
+    # ---- Load YOLO models ---------------------------------------------------
+    yolo_model_calib = None
+    yolo_model_detect = None
+    if yolo_calib_path is not None:
+        print(f"[INFO] Loading YOLO calibration model: {yolo_calib_path}")
+        yolo_model_calib = YOLO(str(yolo_calib_path))
+    if yolo_detect_path is not None:
+        if yolo_detect_path == yolo_calib_path and yolo_model_calib is not None:
+            yolo_model_detect = yolo_model_calib
+            print(f"[INFO] Using same model for detection")
+        else:
+            print(f"[INFO] Loading YOLO detection model: {yolo_detect_path}")
+            yolo_model_detect = YOLO(str(yolo_detect_path))
+    if yolo_model_calib is None and yolo_model_detect is None:
+        print(f"[INFO] No YOLO models provided — running without YOLO detection")
 
     # ---- Open video --------------------------------------------------------
     cap = cv2.VideoCapture(str(video_path))
@@ -680,6 +747,16 @@ def main():
     # Run YOLO on frame 1 and then as a sanity check every 10 frames
     YOLO_PERIODIC = args.yolo_periodic
 
+    # ---- Motion green screen state ------------------------------------------
+    previous_frame_gray = None
+    motion_kernel = np.ones((5, 5), np.uint8)
+    close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+    MOTION_MIN_AREA = 100
+    MOTION_MAX_AREA = 3000
+    motion_mask_dir = output_path.with_name("motion-mask")
+    if not args.no_motion_mask:
+        motion_mask_dir.mkdir(parents=True, exist_ok=True)
+
     print("\n[INFO] Processing — press 'q' in the display window to quit early.\n")
 
     frame_num = 0
@@ -691,6 +768,20 @@ def main():
             break
 
         frame_num += 1
+
+        # ---- Motion green screen: prepare grayscale for this frame -----------
+        if not args.no_motion_mask:
+            current_frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            if previous_frame_gray is None:
+                previous_frame_gray = current_frame_gray
+                # Write the raw first frame to output and skip processing
+                writer.write(frame)
+                cv2.imshow("Basketball Tracker", frame)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    print("\n[INFO] Quit requested by user.")
+                    break
+                continue
+
         mode = "YOLO"
         current_color = (0, 0, 255)   # RED  = YOLO active
         bbox_to_draw = None
@@ -700,7 +791,10 @@ def main():
         # ----------------------------------------------------------------
         if nano_calibrating:
             nano_calib_frame_count += 1
-            detected_bbox = detect_ball_yolo(yolo_model, frame, args.yolo_confidence)
+            detected_bbox = (
+                detect_ball_yolo(yolo_model_calib, frame, args.yolo_confidence, args.yolo_imgsz_calibration)
+                if yolo_model_calib is not None else None
+            )
 
             if detected_bbox is not None:
                 sane, sane_reason = is_bbox_sane(
@@ -808,8 +902,8 @@ def main():
                         f"avg diag={avg_calib_diag:.0f} (ratio={size_ratio:.2f})"
                     )
             # Every 30 frames: compare YOLO detection vs tracker position
-            if frame_num % 30 == 0:
-                yolo_bbox_check = detect_ball_yolo(yolo_model, frame, args.yolo_confidence)
+            if frame_num % 30 == 0 and yolo_model_detect is not None:
+                yolo_bbox_check = detect_ball_yolo(yolo_model_detect, frame, args.yolo_confidence, args.yolo_imgsz_detection)
                 if yolo_bbox_check is not None:
                     yx, yy, yw, yh = yolo_bbox_check
                     yolo_cx, yolo_cy = yx + yw / 2, yy + yh / 2
@@ -882,14 +976,19 @@ def main():
                 )
 
         # ----------------------------------------------------------------
-        # Phase 2: YOLO detection
+        # Phase 2: YOLO detection (raw frame first, motion mask fallback)
         # ----------------------------------------------------------------
         if run_yolo:
             tracker_conf = None
-            detected_bbox = detect_ball_yolo(yolo_model, frame, args.yolo_confidence)
+
+            # --- Try YOLO on the raw frame first ---
+            detected_bbox = (
+                detect_ball_yolo(yolo_model_detect, frame, args.yolo_confidence, args.yolo_imgsz_detection)
+                if yolo_model_detect is not None else None
+            )
+            used_motion_mask = False
 
             if detected_bbox is not None:
-                # Gate 1: physical plausibility (size, aspect ratio, jump).
                 sane, sane_reason = is_bbox_sane(
                     detected_bbox, width, height,
                     prev_bbox=bbox,
@@ -902,7 +1001,47 @@ def main():
                         f"  [INFO] Frame {frame_num}: YOLO bbox rejected by sanity "
                         f"check ({sane_reason})"
                     )
-                    detected_bbox = None  # falls through to the else below
+                    detected_bbox = None
+
+            # --- Fallback: motion mask if raw frame found nothing ---
+            if detected_bbox is None and yolo_model_detect is not None and not args.no_motion_mask and previous_frame_gray is not None:
+                frame_diff = cv2.absdiff(previous_frame_gray, current_frame_gray)
+                _, motion_bin = cv2.threshold(frame_diff, 25, 255, cv2.THRESH_BINARY)
+                motion_bin = cv2.dilate(motion_bin, motion_kernel, iterations=3)
+
+                closed_mask = cv2.morphologyEx(motion_bin, cv2.MORPH_CLOSE, close_kernel)
+                contours, _ = cv2.findContours(closed_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                cleaned_mask = np.zeros_like(motion_bin)
+                for cnt in contours:
+                    area = cv2.contourArea(cnt)
+                    if area < MOTION_MIN_AREA:
+                        continue
+                    elif area <= MOTION_MAX_AREA:
+                        (cx, cy), radius = cv2.minEnclosingCircle(cnt)
+                        cv2.circle(cleaned_mask, (int(cx), int(cy)), int(radius), 255, -1)
+                    else:
+                        cv2.drawContours(cleaned_mask, [cnt], -1, 255, -1)
+
+                yolo_frame = cv2.bitwise_and(frame, frame, mask=cleaned_mask)
+                cv2.imwrite(str(motion_mask_dir / f"frame_{frame_num:06d}.png"), yolo_frame)
+
+                detected_bbox = detect_ball_yolo(yolo_model_detect, yolo_frame, args.yolo_confidence, args.yolo_imgsz_detection)
+                used_motion_mask = True
+
+                if detected_bbox is not None:
+                    sane, sane_reason = is_bbox_sane(
+                        detected_bbox, width, height,
+                        prev_bbox=bbox,
+                        max_area_ratio=args.max_bbox_area,
+                        max_jump_factor=args.max_bbox_jump,
+                    )
+                    if not sane:
+                        bboxes_rejected_by_sanity += 1
+                        print(
+                            f"  [INFO] Frame {frame_num}: YOLO (motion mask) bbox rejected "
+                            f"by sanity check ({sane_reason})"
+                        )
+                        detected_bbox = None
 
             if detected_bbox is not None:
                 # Gate 2: appearance — must look like the ball we've been tracking.
@@ -917,7 +1056,7 @@ def main():
                 if accepted:
                     bbox = detected_bbox
                     bbox_to_draw = bbox
-                    mode = "YOLO"
+                    mode = "YOLO+MASK" if used_motion_mask else "YOLO"
                     current_color = (0, 0, 255)   # RED
                     frames_yolo += 1
 
@@ -958,6 +1097,19 @@ def main():
         # ----------------------------------------------------------------
         output_frame = frame.copy()
 
+        # MediaPipe Object Detection overlay (CYAN boxes)
+        if mp_detector is not None:
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            mp_result = mp_detector.detect(mp_image)
+            for det in mp_result.detections:
+                bb = det.bounding_box
+                mp_label = det.categories[0].category_name if det.categories else "?"
+                mp_score = det.categories[0].score if det.categories else 0.0
+                draw_bbox(output_frame,
+                          (bb.origin_x, bb.origin_y, bb.width, bb.height),
+                          (255, 255, 0),  # CYAN
+                          f"MP:{mp_label} {mp_score:.2f}")
+
         if bbox_to_draw is not None:
             draw_bbox(output_frame, bbox_to_draw, current_color, mode)
 
@@ -975,6 +1127,10 @@ def main():
         if cv2.waitKey(1) & 0xFF == ord("q"):
             print("\n[INFO] Quit requested by user.")
             break
+
+        # Update motion green screen state for next iteration
+        if not args.no_motion_mask:
+            previous_frame_gray = current_frame_gray.copy()
 
         if frame_num % 100 == 0:
             elapsed = time.time() - start_time
