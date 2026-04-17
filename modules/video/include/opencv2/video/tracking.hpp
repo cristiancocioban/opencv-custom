@@ -1130,6 +1130,110 @@ public:
     // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
+/** @brief Detection mode for BallTrackerResult::mode */
+enum BallTrackerMode {
+    BALL_TRACKER_MODE_CALIBRATING = 0,  //!< Calibration phase: collecting YOLO templates
+    BALL_TRACKER_MODE_TRACKER     = 1,  //!< TrackerNano is actively tracking
+    BALL_TRACKER_MODE_YOLO        = 2,  //!< YOLO detected the ball (tracker re-initialised)
+    BALL_TRACKER_MODE_LOST        = 3   //!< Ball not found this frame
+};
+
+/** @brief Per-frame result from BallTracker::processFrame(). */
+struct CV_EXPORTS_W_SIMPLE BallTrackerResult
+{
+    CV_WRAP BallTrackerResult();
+    CV_PROP_RW cv::Rect bbox;        //!< Bounding box in pixels: (x, y, width, height)
+    CV_PROP_RW cv::Rect2d normBbox;  //!< Normalized bounding box (0.0-1.0): (cx, cy, width, height) relative to frame size
+    CV_PROP_RW bool found;           //!< True if the ball was detected/tracked this frame
+    CV_PROP_RW int mode;             //!< Detection mode (see BallTrackerMode enum)
+    CV_PROP_RW float confidence;     //!< Tracker confidence (or YOLO confidence), -1 if N/A
+    CV_PROP_RW int frameNumber;      //!< Frame counter (1-based)
+};
+
+/** @brief Parameters for the BallTracker pipeline. */
+struct CV_EXPORTS_W_SIMPLE BallTrackerParams
+{
+    CV_WRAP BallTrackerParams();
+
+    // ---- YOLO models ----
+    CV_PROP_RW std::string yoloModelCalibration;  //!< Path to YOLO model for calibration phase (empty = skip YOLO in calibration)
+    CV_PROP_RW std::string yoloModelDetection;    //!< Path to YOLO model for detection phase (empty = no YOLO detection)
+    CV_PROP_RW int yoloImgszCalibration;          //!< Input size for calibration YOLO model (default 640)
+    CV_PROP_RW int yoloImgszDetection;            //!< Input size for detection YOLO model (default 640)
+    CV_PROP_RW float yoloConfidence;              //!< Minimum YOLO detection confidence (default 0.5)
+    CV_PROP_RW int yoloClassId;                   //!< Class ID to detect (default 0 = basketball)
+
+    // ---- TrackerNano models ----
+    CV_PROP_RW std::string nanoBackbone;           //!< Path to TrackerNano backbone ONNX model
+    CV_PROP_RW std::string nanoNeckhead;           //!< Path to TrackerNano neckhead ONNX model
+    CV_PROP_RW int searchCrops;                    //!< Max search crops per frame (default 5)
+    CV_PROP_RW float earlyExitScore;               //!< Crop acceptance threshold (default 0.85)
+    CV_PROP_RW int motionHistory;                  //!< Velocity estimation history length (default 5)
+
+    // ---- Tracking thresholds ----
+    CV_PROP_RW float confidenceThreshold;          //!< Tracker confidence below which tracking is lost (default 0.25)
+
+    // ---- Calibration ----
+    CV_PROP_RW int numTemplates;                   //!< Target number of templates to collect (default 5)
+    CV_PROP_RW int calibrationFrames;              //!< Max frames for calibration window (default 100)
+
+    // ---- Periodic re-detection ----
+    CV_PROP_RW int yoloPeriodic;                   //!< Run YOLO every N frames as drift check (default 10)
+    CV_PROP_RW int redetectInterval;               //!< Force YOLO re-detection interval, 0=disabled (default 0)
+
+    // ---- Sanity checks ----
+    CV_PROP_RW float maxBboxArea;                  //!< Max bbox area as fraction of frame (default 0.15)
+    CV_PROP_RW float maxBboxJump;                  //!< Max bbox area growth factor per frame (default 4.0)
+    CV_PROP_RW float maxAspect;                    //!< Max aspect ratio w/h or h/w (default 3.0)
+
+    // ---- Template bank ----
+    CV_PROP_RW int templateBankSize;               //!< Max stored templates for validation (default 8)
+    CV_PROP_RW float templateSimilarity;           //!< Min HSV histogram correlation (default 0.40)
+    CV_PROP_RW bool noTemplateValidation;          //!< Skip template appearance checks (default false)
+
+    // ---- DNN backend ----
+    CV_PROP_RW int backend;                        //!< DNN backend (default DNN_BACKEND_DEFAULT)
+    CV_PROP_RW int target;                         //!< DNN target device (default DNN_TARGET_CPU)
+};
+
+/** @brief High-level basketball tracker combining YOLO detection with TrackerNano.
+ *
+ *  BallTracker encapsulates the full detection-and-tracking pipeline:
+ *    1. Calibration phase: YOLO detects the ball and feeds templates to TrackerNano
+ *    2. Tracking phase: TrackerNano tracks frame-to-frame, YOLO re-detects periodically
+ *    3. Fallback: when tracking is lost, YOLO re-detects and re-initialises the tracker
+ *
+ *  YOLO inference runs through cv::dnn so both ONNX and TFLite models are supported.
+ *  All models are loaded from file paths (on Android, copy assets to internal storage first).
+ */
+class CV_EXPORTS_W BallTracker
+{
+protected:
+    BallTracker();  // use ::create()
+public:
+    virtual ~BallTracker();
+
+    /** @brief Create a BallTracker instance.
+    @param params Pipeline parameters
+    */
+    static CV_WRAP Ptr<BallTracker> create(const BallTrackerParams& params = BallTrackerParams());
+
+    /** @brief Process one video frame through the full pipeline.
+    @param frame Input BGR image
+    @return BallTrackerResult with bbox, mode, and confidence
+    */
+    CV_WRAP virtual BallTrackerResult processFrame(InputArray frame) = 0;
+
+    /** @brief Returns true while the calibration phase is still running. */
+    CV_WRAP virtual bool isCalibrating() const = 0;
+
+    /** @brief Returns the total number of frames processed so far. */
+    CV_WRAP virtual int getFrameCount() const = 0;
+
+    /** @brief Returns the number of calibration templates collected so far. */
+    CV_WRAP virtual int getTemplatesCollected() const = 0;
+};
+
 //! @} video_track
 
 } // cv
