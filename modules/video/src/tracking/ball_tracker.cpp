@@ -4,8 +4,10 @@
 
 // BallTracker: High-level basketball detection + tracking pipeline
 // Combines YOLO (via cv::dnn) with TrackerNano for robust ball tracking.
+// Uses a Dynamic Color Model (EMA histogram) for drift detection.
 
 #include "../precomp.hpp"
+#include <deque>
 #ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn.hpp"
 #endif
@@ -52,10 +54,14 @@ BallTrackerParams::BallTrackerParams()
     maxBboxJump = 4.0f;
     maxAspect = 3.0f;
 
-    // Template bank
-    templateBankSize = 8;
-    templateSimilarity = 0.40f;
-    noTemplateValidation = false;
+    // Dynamic Color Model
+    colorAlpha = 0.10f;
+    driftThreshold = 0.30f;
+    agreementDistance = 50.0f;
+    maxSizeChangeRatio = 1.8f;
+    sizeHistoryLength = 10;
+    maxRecoveryFrames = 30;
+    noColorValidation = false;
 
     // DNN
 #ifdef HAVE_OPENCV_DNN
@@ -75,10 +81,10 @@ BallTrackerResult::BallTrackerResult()
 #ifdef HAVE_OPENCV_DNN
 
 // ============================================================================
-// TemplateBank — HSV histogram-based appearance validation
+// DynamicColorModel -EMA histogram-based appearance validation
 // ============================================================================
 
-class TemplateBank
+class DynamicColorModel
 {
 public:
     static const int H_BINS = 18;
@@ -86,42 +92,53 @@ public:
     static const int COMPARE_W = 32;
     static const int COMPARE_H = 32;
 
-    TemplateBank(int maxSize, float minSimilarity)
-        : maxSize_(maxSize), minSimilarity_(minSimilarity) {}
+    DynamicColorModel(float alpha, float driftThreshold)
+        : alpha_(alpha), driftThreshold_(driftThreshold), initialized_(false), updateCount_(0) {}
 
-    bool isFull() const { return (int)entries_.size() >= maxSize_; }
-    bool isEmpty() const { return entries_.empty(); }
-    int size() const { return (int)entries_.size(); }
+    // Color model is ready for validation only after multiple YOLO confirmations
+    bool isReady() const { return initialized_ && updateCount_ >= 3; }
 
-    bool add(const Mat& frame, const Rect& bbox)
+    // Called ONLY when we are confident this is the ball (YOLO confirmed)
+    void update(const Mat& frame, const Rect& bbox)
     {
-        if (isFull()) return false;
         Mat crop = safeCrop(frame, bbox);
-        if (crop.empty()) return false;
-        entries_.push_back(computeHist(crop));
-        return true;
+        if (crop.empty()) return;
+        Mat cropHist = computeHist(crop);
+
+        updateCount_++;
+        if (!initialized_)
+        {
+            runningHist_ = cropHist.clone();
+            anchorHist_ = cropHist.clone();
+            initialized_ = true;
+        }
+        else
+        {
+            // EMA blend: slowly adapt to motion blur, lighting changes
+            runningHist_ = (1.0f - alpha_) * runningHist_ + alpha_ * cropHist;
+            normalize(runningHist_, runningHist_, 0, 1, NORM_MINMAX);
+        }
     }
 
-    // Returns (accepted, similarity)
-    std::pair<bool, float> validate(const Mat& frame, const Rect& bbox) const
+    // Returns similarity score (0-1). Higher = more similar to known ball.
+    float similarity(const Mat& frame, const Rect& bbox) const
     {
-        float score = bestSimilarity(frame, bbox);
-        return std::make_pair(score >= minSimilarity_, score);
-    }
-
-    float bestSimilarity(const Mat& frame, const Rect& bbox) const
-    {
-        if (isEmpty()) return 1.0f;
+        if (!initialized_) return 1.0f;  // No model yet -accept everything
         Mat crop = safeCrop(frame, bbox);
         if (crop.empty()) return 0.0f;
-        Mat candHist = computeHist(crop);
-        float best = -1.0f;
-        for (const auto& h : entries_)
-        {
-            float score = (float)compareHist(candHist, h, HISTCMP_CORREL);
-            if (score > best) best = score;
-        }
-        return best;
+        Mat cropHist = computeHist(crop);
+
+        float runningScore = (float)compareHist(cropHist, runningHist_, HISTCMP_CORREL);
+        float anchorScore = (float)compareHist(cropHist, anchorHist_, HISTCMP_CORREL);
+        // Use the higher of the two -anchor catches cases where
+        // the running model drifted but the ball returned to original appearance
+        return std::max(runningScore, anchorScore);
+    }
+
+    // Check if a bbox looks like the ball
+    bool validate(const Mat& frame, const Rect& bbox) const
+    {
+        return similarity(frame, bbox) >= driftThreshold_;
     }
 
 private:
@@ -150,9 +167,58 @@ private:
         return hist;
     }
 
-    int maxSize_;
-    float minSimilarity_;
-    std::vector<Mat> entries_;
+    float alpha_;
+    float driftThreshold_;
+    bool initialized_;
+    int updateCount_;
+    Mat runningHist_;    // EMA histogram -evolves over time
+    Mat anchorHist_;     // Frozen histogram from first YOLO confirmation
+};
+
+
+// ============================================================================
+// SizeTracker -rolling window bbox size consistency check
+// ============================================================================
+
+class SizeTracker
+{
+public:
+    SizeTracker(int windowSize, float maxChangeRatio)
+        : windowSize_(windowSize), maxChangeRatio_(maxChangeRatio) {}
+
+    void push(const Rect& bbox)
+    {
+        float diag = std::sqrt((float)(bbox.width * bbox.width + bbox.height * bbox.height));
+        history_.push_back(diag);
+        if ((int)history_.size() > windowSize_)
+            history_.pop_front();
+    }
+
+    // Returns true if the bbox size is consistent with recent history
+    bool isConsistent(const Rect& bbox) const
+    {
+        if (history_.size() < 3) return true;  // Not enough data
+        float diag = std::sqrt((float)(bbox.width * bbox.width + bbox.height * bbox.height));
+        float avg = averageDiag();
+        if (avg <= 0) return true;
+        float ratio = diag / avg;
+        return ratio <= maxChangeRatio_ && ratio >= (1.0f / maxChangeRatio_);
+    }
+
+    float averageDiag() const
+    {
+        if (history_.empty()) return 0.f;
+        float sum = 0.f;
+        for (float d : history_) sum += d;
+        return sum / (float)history_.size();
+    }
+
+    void clear() { history_.clear(); }
+
+private:
+    int windowSize_;
+    float maxChangeRatio_;
+    std::deque<float> history_;
 };
 
 
@@ -182,14 +248,12 @@ public:
 
     bool isLoaded() const { return loaded_; }
 
-    // Returns best detection as Rect, or empty Rect if nothing found
-    // Also sets outConf to the confidence of the best detection
     Rect detect(const Mat& frame, float& outConf) const
     {
         outConf = 0.f;
         if (!loaded_) return Rect();
 
-        // Letterbox preprocessing: resize preserving aspect ratio and pad with gray
+        // Letterbox preprocessing
         int origW = frame.cols;
         int origH = frame.rows;
         float scale = std::min((float)imgSize_ / origW, (float)imgSize_ / origH);
@@ -207,29 +271,25 @@ public:
                                       Scalar(), true, false);
         net_.setInput(blob);
 
-        // Forward
         std::vector<Mat> outputs;
         net_.forward(outputs, net_.getUnconnectedOutLayersNames());
 
         if (outputs.empty()) return Rect();
 
-        // Parse YOLO output: shape [1, N, 5+C] or [1, 5+C, N] (YOLOv8/v11 transposed)
         Mat out = outputs[0];
 
-        // Handle 3D output: [1, rows, cols]
         if (out.dims == 3)
         {
             int d1 = out.size[1];
             int d2 = out.size[2];
-            // YOLOv8/v11 outputs [1, 5+C, N] — need to transpose to [1, N, 5+C]
             if (d1 < d2)
             {
-                out = out.reshape(1, d1);  // [5+C, N]
-                cv::transpose(out, out);   // [N, 5+C]
+                out = out.reshape(1, d1);
+                cv::transpose(out, out);
             }
             else
             {
-                out = out.reshape(1, d1);  // [N, 5+C]
+                out = out.reshape(1, d1);
             }
         }
 
@@ -239,33 +299,21 @@ public:
 
         Rect bestBox;
         float bestConf = 0.f;
-
-        // Letterbox-to-original coordinate transform
         float invScale = 1.0f / scale;
 
-        // Output format after stripping NMS (recommended):
-        //   [N, 5]: [x1, y1, x2, y2, score] in letterbox coords (single-class)
-        //   [N, 4+C]: [x1, y1, x2, y2, cls0_score, cls1_score, ...] (multi-class)
-        // Also supports NMS format:
-        //   [N, 6]: [x1, y1, x2, y2, score, class_id]
-
-        // All coordinates are x1,y1,x2,y2 in letterbox space
-        int scoreCol = 4;  // confidence/score column
+        int scoreCol = 4;
         bool hasClassIdCol = false;
 
         if (cols == 6)
         {
-            // NMS format with class_id column: [x1,y1,x2,y2,score,class_id]
             hasClassIdCol = true;
         }
         else if (cols == 5)
         {
-            // Single-class: [x1,y1,x2,y2,score]
             scoreCol = 4;
         }
         else if (cols > 5)
         {
-            // Multi-class: [x1,y1,x2,y2,cls0,cls1,...]
             scoreCol = 4 + classId_;
             if (scoreCol >= cols) return Rect();
         }
@@ -351,6 +399,27 @@ static bool isBboxSane(const Rect& bbox, int frameW, int frameH,
     return true;
 }
 
+// Helper: center distance between two Rects
+static float centerDistance(const Rect& a, const Rect& b)
+{
+    float ax = a.x + a.width * 0.5f;
+    float ay = a.y + a.height * 0.5f;
+    float bx = b.x + b.width * 0.5f;
+    float by = b.y + b.height * 0.5f;
+    return std::sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by));
+}
+
+// Helper: fill normBbox from pixel bbox and frame dims
+static void fillNormBbox(BallTrackerResult& result, int frameW, int frameH)
+{
+    result.normBbox = Rect2d(
+        (result.bbox.x + result.bbox.width * 0.5) / frameW,
+        (result.bbox.y + result.bbox.height * 0.5) / frameH,
+        (double)result.bbox.width / frameW,
+        (double)result.bbox.height / frameH
+    );
+}
+
 
 // ============================================================================
 // BallTrackerImpl
@@ -361,7 +430,8 @@ class BallTrackerImpl : public BallTracker
 public:
     BallTrackerImpl(const BallTrackerParams& params)
         : params_(params)
-        , bank_(params.templateBankSize, params.templateSimilarity)
+        , colorModel_(params.colorAlpha, params.driftThreshold)
+        , sizeTracker_(params.sizeHistoryLength, params.maxSizeChangeRatio)
         , frameNum_(0)
         , calibrating_(false)
         , calibDone_(false)
@@ -369,27 +439,17 @@ public:
         , templatesCollected_(0)
         , calibFrameCount_(0)
         , trackerConf_(-1.f)
+        , recoveryFrames_(0)
+        , inRecovery_(false)
     {
         // Load YOLO models
         yoloCalib_.load(params.yoloModelCalibration, params.yoloImgszCalibration,
                         params.yoloConfidence, params.yoloClassId,
                         params.backend, params.target);
 
-        if (!params.yoloModelDetection.empty() &&
-            params.yoloModelDetection == params.yoloModelCalibration &&
-            params.yoloImgszDetection == params.yoloImgszCalibration)
-        {
-            // Same model — share (but YoloDetector copies Net, so just load again)
-            yoloDetect_.load(params.yoloModelDetection, params.yoloImgszDetection,
-                             params.yoloConfidence, params.yoloClassId,
-                             params.backend, params.target);
-        }
-        else
-        {
-            yoloDetect_.load(params.yoloModelDetection, params.yoloImgszDetection,
-                             params.yoloConfidence, params.yoloClassId,
-                             params.backend, params.target);
-        }
+        yoloDetect_.load(params.yoloModelDetection, params.yoloImgszDetection,
+                         params.yoloConfidence, params.yoloClassId,
+                         params.backend, params.target);
 
         // Create TrackerNano if models are provided
         useTracker_ = !params.nanoBackbone.empty() && !params.nanoNeckhead.empty();
@@ -447,7 +507,8 @@ public:
                 if (sane)
                 {
                     tracker_->addTemplate(frame, detBbox);
-                    bank_.add(frame, detBbox);
+                    colorModel_.update(frame, detBbox);
+                    sizeTracker_.push(detBbox);
                     templatesCollected_++;
                     lastBbox_ = detBbox;
                     hasLastBbox_ = true;
@@ -460,18 +521,13 @@ public:
                 }
                 else
                 {
-                    printf("[BallTracker] Calibration frame %d: YOLO found bbox=(%d,%d,%dx%d) conf=%.4f but rejected: %s\n",
-                           frameNum_, detBbox.x, detBbox.y, detBbox.width, detBbox.height, detConf, reason.c_str());
+                    printf("[BallTracker] Calibration frame %d: YOLO bbox rejected: %s\n",
+                           frameNum_, reason.c_str());
                 }
-            }
-            else
-            {
-                printf("[BallTracker] Calibration frame %d: YOLO found nothing\n", frameNum_);
             }
 
             result.mode = BALL_TRACKER_MODE_CALIBRATING;
 
-            // Check if calibration is done
             bool done = (templatesCollected_ >= params_.numTemplates) ||
                         (calibFrameCount_ >= params_.calibrationFrames);
 
@@ -482,11 +538,12 @@ public:
                 trackingActive_ = true;
                 calibrating_ = false;
                 calibDone_ = true;
+                printf("[BallTracker] Calibration complete: %d template(s) in %d frames\n",
+                       templatesCollected_, calibFrameCount_);
             }
             else if (done && templatesCollected_ == 0)
             {
-                // Calibration failed — stop calibrating, enter YOLO-only fallback
-                printf("[BallTracker] Calibration FAILED: no ball detected in %d frames — falling back to YOLO-only\n",
+                printf("[BallTracker] Calibration FAILED: no ball detected in %d frames\n",
                        calibFrameCount_);
                 calibrating_ = false;
                 calibDone_ = false;
@@ -494,14 +551,7 @@ public:
             }
 
             if (result.found)
-            {
-                result.normBbox = Rect2d(
-                    (result.bbox.x + result.bbox.width * 0.5f) / frameW,
-                    (result.bbox.y + result.bbox.height * 0.5f) / frameH,
-                    (float)result.bbox.width / frameW,
-                    (float)result.bbox.height / frameH
-                );
-            }
+                fillNormBbox(result, frameW, frameH);
             return result;
         }
 
@@ -510,7 +560,8 @@ public:
         // ==============================================================
         bool runYolo = !trackingActive_
             || (params_.yoloPeriodic > 0 && frameNum_ % params_.yoloPeriodic == 0)
-            || (params_.redetectInterval > 0 && frameNum_ % params_.redetectInterval == 0);
+            || (params_.redetectInterval > 0 && frameNum_ % params_.redetectInterval == 0)
+            || inRecovery_;
 
         if (!useTracker_)
             runYolo = true;
@@ -518,14 +569,13 @@ public:
         // ==============================================================
         // Phase 1: TrackerNano update
         // ==============================================================
+        bool trackerDrifted = false;
+
         if (trackingActive_ && tracker_ && useTracker_)
         {
             Rect trkBbox;
             bool success = tracker_->update(frame, trkBbox);
             trackerConf_ = tracker_->getTrackingScore();
-
-            printf("[BallTracker] Frame %d: TrackerNano score=%.4f bbox=(%d,%d,%dx%d)\n",
-                   frameNum_, trackerConf_, trkBbox.x, trkBbox.y, trkBbox.width, trkBbox.height);
 
             std::string reason;
             bool sane = isBboxSane(trkBbox, frameW, frameH,
@@ -533,15 +583,23 @@ public:
                                    params_.maxBboxArea, params_.maxBboxJump, params_.maxAspect,
                                    reason);
 
-            bool trkAccepted;
-            if (params_.noTemplateValidation)
-                trkAccepted = true;
-            else if (sane)
-                trkAccepted = bank_.validate(frame, trkBbox).first;
-            else
-                trkAccepted = false;
+            // --- Drift detection: color validation ---
+            bool colorOk = true;
+            float colorScore = 1.0f;
+            if (!params_.noColorValidation && sane && colorModel_.isReady())
+            {
+                colorScore = colorModel_.similarity(frame, trkBbox);
+                colorOk = (colorScore >= params_.driftThreshold);
+            }
 
-            if (success && trackerConf_ >= params_.confidenceThreshold && sane && trkAccepted)
+            // --- Drift detection: size consistency ---
+            bool sizeOk = true;
+            if (sane)
+            {
+                sizeOk = sizeTracker_.isConsistent(trkBbox);
+            }
+
+            if (success && sane && colorOk && sizeOk)
             {
                 lastBbox_ = trkBbox;
                 hasLastBbox_ = true;
@@ -549,17 +607,38 @@ public:
                 result.found = true;
                 result.mode = BALL_TRACKER_MODE_TRACKER;
                 result.confidence = trackerConf_;
-                // Don't override runYolo for calibrated trackers — allow periodic check
+                sizeTracker_.push(trkBbox);
+
+                // Exit recovery if we were in it
+                if (inRecovery_)
+                {
+                    inRecovery_ = false;
+                    recoveryFrames_ = 0;
+                }
             }
             else
             {
+                // Tracker drifted or lost
+                trackerDrifted = true;
                 trackingActive_ = false;
                 runYolo = true;
+                // Clear lastBbox so sanity checks don't compare against drifted position
+                hasLastBbox_ = false;
+
+                if (!colorOk)
+                    printf("[BallTracker] Frame %d: DRIFT detected (color=%.3f < %.3f)\n",
+                           frameNum_, colorScore, params_.driftThreshold);
+                else if (!sizeOk)
+                    printf("[BallTracker] Frame %d: DRIFT detected (size inconsistent, avg=%.0f)\n",
+                           frameNum_, sizeTracker_.averageDiag());
+                else if (!sane)
+                    printf("[BallTracker] Frame %d: tracker rejected (%s)\n",
+                           frameNum_, reason.c_str());
             }
         }
 
         // ==============================================================
-        // Phase 2: YOLO detection (also runs on periodic frames for drift correction)
+        // Phase 2: YOLO detection
         // ==============================================================
         if (runYolo)
         {
@@ -579,54 +658,147 @@ public:
                                        reason);
                 if (!sane)
                 {
+                    printf("[BallTracker] Frame %d: YOLO bbox rejected (%s)\n", frameNum_, reason.c_str());
                     detBbox = Rect();
                 }
+            }
+            else if (inRecovery_)
+            {
+                printf("[BallTracker] Frame %d: RECOVERY -YOLO found nothing\n", frameNum_);
             }
 
             if (detBbox.width > 0 && detBbox.height > 0)
             {
-                // Appearance validation
-                bool accepted = true;
-                if (useTracker_ && !params_.noTemplateValidation)
+                // --- YOLO Confirmation Gate ---
+                // If tracker already found the ball this frame (periodic check),
+                // compare tracker vs YOLO positions before deciding
+                if (result.found && result.mode == BALL_TRACKER_MODE_TRACKER)
                 {
-                    accepted = bank_.validate(frame, detBbox).first;
-                }
+                    float dist = centerDistance(result.bbox, detBbox);
 
-                if (accepted)
-                {
-                    lastBbox_ = detBbox;
-                    hasLastBbox_ = true;
-                    result.bbox = detBbox;
-                    result.found = true;
-                    result.mode = BALL_TRACKER_MODE_YOLO;
-                    result.confidence = detConf;
-
-                    bank_.add(frame, detBbox);
-
-                    // Re-initialise tracker
-                    if (useTracker_ && calibDone_ && tracker_)
+                    if (dist <= params_.agreementDistance)
                     {
-                        tracker_->init(frame, detBbox);
-                        trackingActive_ = true;
+                        // They agree -tracker is healthy, keep tracker result (smoother)
+                        // But update color model since YOLO confirmed
+                        colorModel_.update(frame, result.bbox);
+                        // Don't overwrite result -keep tracker
+                    }
+                    else
+                    {
+                        // They disagree -but only trust YOLO if it passes color validation
+                        // (prevents re-init onto player/head when YOLO misdetects)
+                        float yoloColorScore = colorModel_.isReady()
+                            ? colorModel_.similarity(frame, detBbox) : 1.0f;
+                        bool yoloLooksLikeBall = params_.noColorValidation
+                            || yoloColorScore >= params_.driftThreshold;
+
+                        if (yoloLooksLikeBall)
+                        {
+                            printf("[BallTracker] Frame %d: tracker/YOLO disagree (dist=%.0f) -YOLO color=%.3f OK, re-init\n",
+                                   frameNum_, dist, yoloColorScore);
+
+                            colorModel_.update(frame, detBbox);
+                            sizeTracker_.push(detBbox);
+                            lastBbox_ = detBbox;
+                            hasLastBbox_ = true;
+                            result.bbox = detBbox;
+                            result.found = true;
+                            result.mode = BALL_TRACKER_MODE_YOLO;
+                            result.confidence = detConf;
+
+                            if (useTracker_ && calibDone_ && tracker_)
+                            {
+                                tracker_->init(frame, detBbox);
+                                trackingActive_ = true;
+                            }
+                        }
+                        else
+                        {
+                            // YOLO detection doesn't look like the ball either -both are wrong
+                            printf("[BallTracker] Frame %d: tracker/YOLO disagree (dist=%.0f) -YOLO color=%.3f REJECTED, entering recovery\n",
+                                   frameNum_, dist, yoloColorScore);
+                            trackingActive_ = false;
+                            trackerDrifted = true;
+                            result.found = false;
+                        }
+                    }
+                }
+                else
+                {
+                    // Tracker didn't find it (or wasn't running) -use YOLO result
+                    // Only validate YOLO against color model when:
+                    //   - tracker is active (not YOLO-only fallback)
+                    //   - color model is initialized
+                    //   - not in recovery or drift (color model may be stale)
+                    bool yoloColorOk = true;
+                    if (!params_.noColorValidation && useTracker_ && colorModel_.isReady()
+                        && !inRecovery_ && !trackerDrifted)
+                    {
+                        yoloColorOk = colorModel_.validate(frame, detBbox);
+                    }
+
+                    if (yoloColorOk)
+                    {
+                        colorModel_.update(frame, detBbox);
+                        sizeTracker_.push(detBbox);
+                        lastBbox_ = detBbox;
+                        hasLastBbox_ = true;
+                        result.bbox = detBbox;
+                        result.found = true;
+                        result.mode = BALL_TRACKER_MODE_YOLO;
+                        result.confidence = detConf;
+
+                        if (useTracker_ && calibDone_ && tracker_)
+                        {
+                            tracker_->init(frame, detBbox);
+                            trackingActive_ = true;
+                        }
+
+                        // Exit recovery
+                        inRecovery_ = false;
+                        recoveryFrames_ = 0;
+                    }
+                    else
+                    {
+                        printf("[BallTracker] Frame %d: YOLO detection rejected by color model\n",
+                               frameNum_);
                     }
                 }
             }
         }
 
-        // If still nothing found
+        // ==============================================================
+        // Recovery mode
+        // ==============================================================
         if (!result.found)
         {
+            if (!inRecovery_ && trackerDrifted)
+            {
+                // Just entered recovery
+                inRecovery_ = true;
+                recoveryFrames_ = 1;
+                printf("[BallTracker] Frame %d: entering RECOVERY mode\n", frameNum_);
+            }
+            else if (inRecovery_)
+            {
+                recoveryFrames_++;
+                if (recoveryFrames_ > params_.maxRecoveryFrames)
+                {
+                    // Give up recovery -stop running YOLO every frame
+                    printf("[BallTracker] Frame %d: recovery exhausted (%d frames)\n",
+                           frameNum_, recoveryFrames_);
+                    inRecovery_ = false;
+                    recoveryFrames_ = 0;
+                    sizeTracker_.clear();
+                }
+            }
+
             result.mode = BALL_TRACKER_MODE_LOST;
             trackingActive_ = false;
         }
         else
         {
-            result.normBbox = Rect2d(
-                (result.bbox.x + result.bbox.width * 0.5f) / frameW,
-                (result.bbox.y + result.bbox.height * 0.5f) / frameH,
-                (float)result.bbox.width / frameW,
-                (float)result.bbox.height / frameH
-            );
+            fillNormBbox(result, frameW, frameH);
         }
 
         return result;
@@ -638,7 +810,8 @@ public:
 
 private:
     BallTrackerParams params_;
-    TemplateBank bank_;
+    DynamicColorModel colorModel_;
+    SizeTracker sizeTracker_;
 
     YoloDetector yoloCalib_;
     YoloDetector yoloDetect_;
@@ -653,6 +826,10 @@ private:
     int templatesCollected_;
     int calibFrameCount_;
     float trackerConf_;
+
+    // Recovery state
+    int recoveryFrames_;
+    bool inRecovery_;
 
     Rect lastBbox_;
     bool hasLastBbox_ = false;

@@ -1186,10 +1186,14 @@ struct CV_EXPORTS_W_SIMPLE BallTrackerParams
     CV_PROP_RW float maxBboxJump;                  //!< Max bbox area growth factor per frame (default 4.0)
     CV_PROP_RW float maxAspect;                    //!< Max aspect ratio w/h or h/w (default 3.0)
 
-    // ---- Template bank ----
-    CV_PROP_RW int templateBankSize;               //!< Max stored templates for validation (default 8)
-    CV_PROP_RW float templateSimilarity;           //!< Min HSV histogram correlation (default 0.40)
-    CV_PROP_RW bool noTemplateValidation;          //!< Skip template appearance checks (default false)
+    // ---- Appearance validation (Dynamic Color Model) ----
+    CV_PROP_RW float colorAlpha;                   //!< EMA blend weight for dynamic color model (default 0.10)
+    CV_PROP_RW float driftThreshold;               //!< Color similarity below which tracker is drifted (default 0.30)
+    CV_PROP_RW float agreementDistance;             //!< Max center distance (px) for tracker/YOLO agreement (default 50.0)
+    CV_PROP_RW float maxSizeChangeRatio;           //!< Max bbox diagonal change ratio before drift (default 1.8)
+    CV_PROP_RW int sizeHistoryLength;              //!< Rolling window size for size consistency (default 10)
+    CV_PROP_RW int maxRecoveryFrames;              //!< Max frames to run YOLO every frame during recovery (default 30)
+    CV_PROP_RW bool noColorValidation;             //!< Skip all color/appearance checks (default false)
 
     // ---- DNN backend ----
     CV_PROP_RW int backend;                        //!< DNN backend (default DNN_BACKEND_DEFAULT)
