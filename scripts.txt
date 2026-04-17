@@ -58,6 +58,9 @@ python ball_tracker.py --video videos/test_dribble.mp4 --tracker nano --nano-bac
 python ball_tracker.py --video videos/test_video_shoot_cc_shorter.mp4 --nano-backbone models/nanotrack_backbone_sim_v2.onnx --nano-neckhead models/nanotrack_head_sim_v2.onnx --num-templates 1 --calibration-frames 100 --yolo-periodic 3 --search-crops 1 --max-bbox-jump 100 --yolo-model-calibration models/ball_detection_v26n_320_07_04_raw.onnx  --yolo-imgsz-calibration 320 --yolo-model-detection models/ball_detection_v26n_320_07_04_raw.onnx --yolo-imgsz-detection 320 --drift-threshold 0.50
 python ball_tracker.py --video videos/test_dribble.mp4 --nano-backbone models/nanotrack_backbone_sim_v2.onnx --nano-neckhead models/nanotrack_head_sim_v2.onnx --num-templates 1 --calibration-frames 100 --yolo-periodic 3 --search-crops 1 --max-bbox-jump 100 --yolo-model-calibration models/ball_detection_v26n_320_07_04_raw.onnx --yolo-imgsz-calibration 320 --yolo-model-detection models/ball_detection_v26n_320_07_04_raw.onnx --yolo-imgsz-detection 320 --drift-threshold 0.50
 
+python ball_tracker.py --video videos/test_dribble.mp4 --nano-backbone models/nanotrack_backbone_sim_v2.onnx --nano-neckhead models/nanotrack_head_sim_v2.onnx --num-templates 1 --calibration-frames 1 --yolo-periodic 1 --search-crops 1 --max-bbox-jump 100 --yolo-model-calibration models/ball_detection_v26n_640_07_04_raw.onnx --yolo-imgsz-calibration 640 --yolo-model-detection models/ball_detection_v26n_640_07_04_raw.onnx --yolo-imgsz-detection 640 --drift-threshold 0.50
+
+
 python platforms/android/build_sdk.py --ndk_path "C:\Users\crist\AppData\Local\Android\Sdk\ndk\28.2.13676358" --sdk_path "C:\Users\crist\AppData\Local\Android\Sdk" --config platforms/android/ndk-arm64-only.config.py --no_samples_build --no_kotlin --no-strict-dependencies build_android .
 
 

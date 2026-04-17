@@ -6,6 +6,7 @@ cmake_common_vars = {
     'ANDROID_GRADLE_PLUGIN_VERSION': '7.3.1',
     'GRADLE_VERSION': '7.5.1',
     'KOTLIN_PLUGIN_VERSION': '1.8.20',
+    'ANDROID_STL': 'c++_static',
 }
 ABIs = [
     ABI("3", "arm64-v8a", None, ndk_api_level=ANDROID_NATIVE_API_LEVEL, cmake_vars=cmake_common_vars),
