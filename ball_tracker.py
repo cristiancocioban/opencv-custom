@@ -133,13 +133,17 @@ def parse_args():
     parser.add_argument("--max-bbox-jump", type=float, default=4.0,
                         help="Max bbox area growth per frame (default: 4.0)")
 
-    # Template bank
-    parser.add_argument("--template-bank-size", type=int, default=8,
-                        help="Max stored templates (default: 8)")
-    parser.add_argument("--template-similarity", type=float, default=0.40,
-                        help="Min HSV histogram correlation (default: 0.40)")
-    parser.add_argument("--no-template-validation", action="store_true",
-                        help="Disable template bank appearance checks")
+    # Appearance validation (Dynamic Color Model)
+    parser.add_argument("--color-alpha", type=float, default=0.10,
+                        help="EMA blend weight for dynamic color model (default: 0.10)")
+    parser.add_argument("--drift-threshold", type=float, default=0.30,
+                        help="Color similarity below which tracker is drifted (default: 0.30)")
+    parser.add_argument("--agreement-distance", type=float, default=50.0,
+                        help="Max center distance (px) for tracker/YOLO agreement (default: 50.0)")
+    parser.add_argument("--max-size-change-ratio", type=float, default=1.8,
+                        help="Max bbox diagonal change ratio before drift (default: 1.8)")
+    parser.add_argument("--no-color-validation", action="store_true",
+                        help="Disable all color/appearance checks")
 
     # DNN backend
     parser.add_argument("--backend", type=str, default="default",
@@ -193,9 +197,11 @@ def main():
     params.maxBboxArea = args.max_bbox_area
     params.maxBboxJump = args.max_bbox_jump
 
-    params.templateBankSize = args.template_bank_size
-    params.templateSimilarity = args.template_similarity
-    params.noTemplateValidation = args.no_template_validation
+    params.colorAlpha = args.color_alpha
+    params.driftThreshold = args.drift_threshold
+    params.agreementDistance = args.agreement_distance
+    params.maxSizeChangeRatio = args.max_size_change_ratio
+    params.noColorValidation = args.no_color_validation
 
     backend_map = {
         "default": cv2.dnn.DNN_BACKEND_DEFAULT,
