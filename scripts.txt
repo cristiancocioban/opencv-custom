@@ -63,6 +63,21 @@ python ball_tracker.py --video videos/test_dribble.mp4 --nano-backbone models/na
 
 python platforms/android/build_sdk.py --ndk_path "C:\Users\crist\AppData\Local\Android\Sdk\ndk\28.2.13676358" --sdk_path "C:\Users\crist\AppData\Local\Android\Sdk" --config platforms/android/ndk-arm64-only.config.py --no_samples_build --no_kotlin --no-strict-dependencies build_android .
 
-
+on windows copy the pyd file into the site-packages of your Python environment, for example:
+cp -v "c:/_development/ai/opencv-custom/opencv/build/lib/python3/Release/cv2.cp311-win_amd64.pyd" "C:/Users/crist/anaconda3/envs/bskt_tracker/Lib/site-packages/cv2/cv2.pyd" && ls -la "C:/Users/crist/anaconda3/envs/bskt_tracker/Lib/site-packages/cv2/cv2.pyd"
 
 c:/_development/ai/opencv-custom/opencv/build_android/o4a/opencv_android/opencv/build/outputs/aar/opencv-debug.aar
+
+ffmpeg -i ../raw_dribbling_videos/low_dribbling_28_04.MOV -c:v libx264 -c:a aac ../raw_dribbling_videos/low_dribbling_28_04.mp4
+ffmpeg -ss 00:00:44 -to 00:04:23 -i ../raw_dribbling_videos/10_minute_home_dribbling.mp4 -c copy ../raw_dribbling_videos/10_minute_home_dribbling_pound_crossover.mp4
+ffmpeg -i ../raw_dribbling_videos/10_minute_home_dribbling_pound_crossover.mp4 -c:v libx264 -crf 23 -pix_fmt yuv420p ../raw_dribbling_videos/10_minute_home_dribbling_pound_crossover_fixed.mp4
+ffmpeg -i ../raw_dribbling_videos/crossover_07_05_6.MOV -c:v libx264 -crf 23 -pix_fmt yuv420p ../raw_dribbling_videos/crossover_07_05_6.mp4
+
+
+python 30_generate_debug.py --tracker --nano-backbone ../models/nanotrack_backbone_sim_v2.onnx --nano-neckhead ../models/nanotrack_head_sim_v2.onnx
+
+python 10_build_dribble_dataset.py --tracker --weights ../models/ball_detection_v26n_640_07_04_raw.onnx --nano-backbone ../models/nanotrack_backbone_sim_v2.onnx --nano-neckhead ../models/nanotrack_head_sim_v2.onnx
+
+python .\91_download_youtube.py https://www.youtube.com/watch?v=umb5HtNgiyc --start 00:09 --end 00:34 --cookies-from-browser firefox
+
+python .\91_download_youtube.py https://www.youtube.com/shorts/_f6LgcVVHBo --cookies-from-browser firefox

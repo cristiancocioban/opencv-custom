@@ -1,0 +1,43 @@
+open docker desktop
+check if the CVAT container is running, if not start it with: ?
+go to http://localhost:8080
+python csv_to_cvat.py
+
+Step 1: Create the Task and Upload the Video
+Open CVAT in your browser (http://localhost:8080) and click the "+" (Create new task) button.
+Give it a name (e.g., "Driveway Video 1").
+Under the Files section, drag and drop the exact same .mp4 raw video that your Python script just processed.
+
+Step 2: Define Your Labels
+Before you hit submit, CVAT needs to know what vocabulary to expect.
+In that same "Create Task" screen, find the Labels section.
+Click Add Label and type Crossover. Choose a color, and hit enter.
+Click Add Label again and type Dribble. 
+Choose Tag.
+Click the blue Submit & Open button. CVAT will now upload your video to its database and create the timeline.
+
+Step 3: Upload the AI's Guesses (The XML)
+Now that the video is in the system, you inject your Python script's data.
+On your Task screen, look for the Actions dropdown menu (the three vertical dots).
+Click Upload Annotations.
+Select the CVAT 1.1 format.
+Upload the specific video_name_cvat.xml file you generated for this video.
+
+Step 4: The Proofread
+Click on the Job # link to open the actual video player.
+You will see your video on the screen, and a timeline at the bottom.
+Hit Play.
+Every time your Python script predicted a crossover, you will see a colored tag physically appear on the right side of the screen for that specific frame.
+If the AI was right, do nothing. If the AI made a mistake (like tagging a fumble), simply click the tag on the right side of the screen and hit the Delete key (or click the trash can icon).
+Once you finish watching the video and deleting the mistakes, you go to Menu -> Export Annotations -> CVAT 1.1 to download the new, perfect XML to merge back into your CSV.
+Save the exported files as video1_corrected.xml, video2_corrected.xml, etc., in your project folder.
+
+Go back to your CVAT Job.
+
+Click Menu -> Export job dataset again.
+
+This time, in the dropdown format menu, select CVAT for images 1.1.
+
+Click OK to download the new .zip file.
+
+python merge_ground_truth.py
