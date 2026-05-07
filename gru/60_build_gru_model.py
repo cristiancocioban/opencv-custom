@@ -160,7 +160,7 @@ def train_model():
     best_val_f1 = -1.0
     best_loss_epoch = 0
     best_f1_epoch = 0
-    patience = 8
+    patience = 12
     epochs_since_improvement = 0
 
     print("\nStarting Training...\n")
