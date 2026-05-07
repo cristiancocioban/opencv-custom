@@ -193,18 +193,33 @@ def run_inference(video_path, yolo_path, pytorch_path, output_path,
 
     frame_count = 0
     pending_ghost = None  # prediction from previous frame, drawn on the current frame
-    # --- UPGRADED COUNTING VARIABLES ---
-    total_dribbles = 0
-    is_dribbling = False  # This is our dynamic lock
-    total_crossovers = 0
-    is_crossing = False
-    # Crossover lookahead: when a dribble triggers, open a CROSSOVER_LOOKAHEAD-frame
-    # window and count a crossover if max(p_crossover) within the window exceeds
-    # CROSSOVER_THRESHOLD. Decouples crossover from the exact dribble-apex frame —
-    # the two probability peaks can be 1-2 frames apart.
-    CROSSOVER_LOOKAHEAD = 5
+    # --- PEAK-DETECTION COUNTING (matches 70_evaluate_event_counts.py) ---
+    # For each contiguous run where p_dribble >= DRIBBLE_THRESHOLD, the single
+    # highest sample becomes a candidate peak. Successive peaks closer than
+    # DRIBBLE_MIN_GAP frames collapse to one — that suppresses oscillation
+    # over-counts. For each confirmed dribble peak, a crossover is counted if
+    # max(p_crossover) within +/- CROSSOVER_WINDOW frames of the peak exceeds
+    # CROSSOVER_THRESHOLD.
+    # Streaming consequence: the on-screen count lags real time by
+    # CROSSOVER_WINDOW frames (~0.17s at 30fps) since we wait that long after a
+    # peak to evaluate the post-peak crossover signal.
+    DRIBBLE_THRESHOLD = 0.50
+    DRIBBLE_MIN_GAP = 5
     CROSSOVER_THRESHOLD = 0.30
-    pending_crossover = None  # {frames_left, max_p} while a window is open
+    CROSSOVER_WINDOW = 5
+
+    total_dribbles = 0
+    total_crossovers = 0
+    in_run = False               # currently inside a p_dribble >= threshold run
+    run_max_p = 0.0              # max p_dribble seen in active run
+    run_max_idx = -1             # frame index of the active run's max
+    last_counted_idx = -10000    # frame index of last confirmed peak (for min-gap)
+    # Recent (frame_idx, p_crossover) for pre-peak crossover lookup. Maxlen
+    # comfortably exceeds plausible run length + CROSSOVER_WINDOW.
+    crossover_buffer = deque(maxlen=50)
+    # Confirmed candidate peak awaiting its post-peak crossover window:
+    # {peak_idx, max_pre_cross, max_post_cross, frames_left}
+    pending_peak = None
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret: break
@@ -335,34 +350,51 @@ def run_inference(video_path, yolo_path, pytorch_path, output_path,
             probs = pred_actions[0].numpy()
             p_dribble, p_crossover, p_touch = probs[0], probs[1], probs[2]
             
-            # --- HYSTERESIS STATE MACHINE ---
-            # 1. Trigger: If confident and the lock is OFF, count it and engage the lock!
-            #    Open a crossover-lookahead window seeded with the current p_crossover.
-            #    If a previous window is still open (fast-cadence dribbles overlap),
-            #    finalize it first so its crossover decision isn't lost.
-            if p_dribble > 0.50 and not is_dribbling:
-                total_dribbles += 1
-                is_dribbling = True
-                if pending_crossover is not None and pending_crossover['max_p'] > CROSSOVER_THRESHOLD:
-                    total_crossovers += 1
-                pending_crossover = {
-                    'frames_left': CROSSOVER_LOOKAHEAD,
-                    'max_p': p_crossover,
-                }
+            # --- PEAK-DETECTION STATE MACHINE ---
+            # Track p_crossover history for pre-peak lookback when finalizing.
+            crossover_buffer.append((frame_count, p_crossover))
 
-            # 2. Reset: If the probability drops below our safety threshold, remove the lock!
-            elif p_dribble < 0.30 and is_dribbling:
-                is_dribbling = False
+            # Step 1: Track the active above-threshold run's running max.
+            if p_dribble >= DRIBBLE_THRESHOLD:
+                if not in_run:
+                    in_run = True
+                    run_max_p = p_dribble
+                    run_max_idx = frame_count
+                elif p_dribble > run_max_p:
+                    run_max_p = p_dribble
+                    run_max_idx = frame_count
+            else:
+                # Run just ended — promote the run's max to a pending peak if
+                # it satisfies the min-gap rule against the previous count.
+                if in_run:
+                    if run_max_idx - last_counted_idx >= DRIBBLE_MIN_GAP:
+                        pre_max = 0.0
+                        for idx, pc in crossover_buffer:
+                            if run_max_idx - CROSSOVER_WINDOW <= idx <= run_max_idx:
+                                pre_max = max(pre_max, pc)
+                        pending_peak = {
+                            'peak_idx': run_max_idx,
+                            'max_pre_cross': pre_max,
+                            'max_post_cross': 0.0,
+                            'frames_left': CROSSOVER_WINDOW,
+                        }
+                    in_run = False
+                    run_max_p = 0.0
+                    run_max_idx = -1
 
-            # 3. Crossover lookahead: while a window is open, track max p_crossover.
-            #    When the window closes, count it if the max crossed CROSSOVER_THRESHOLD.
-            if pending_crossover is not None:
-                pending_crossover['max_p'] = max(pending_crossover['max_p'], p_crossover)
-                pending_crossover['frames_left'] -= 1
-                if pending_crossover['frames_left'] <= 0:
-                    if pending_crossover['max_p'] > CROSSOVER_THRESHOLD:
+            # Step 2: Advance any pending peak's post-window. When the window
+            # closes, the peak is confirmed and the dribble + crossover counts
+            # update. The display lag is CROSSOVER_WINDOW frames after the apex.
+            if pending_peak is not None:
+                pending_peak['max_post_cross'] = max(pending_peak['max_post_cross'], p_crossover)
+                pending_peak['frames_left'] -= 1
+                if pending_peak['frames_left'] <= 0:
+                    total_dribbles += 1
+                    last_counted_idx = pending_peak['peak_idx']
+                    max_cross = max(pending_peak['max_pre_cross'], pending_peak['max_post_cross'])
+                    if max_cross > CROSSOVER_THRESHOLD:
                         total_crossovers += 1
-                    pending_crossover = None
+                    pending_peak = None
 
             # --- CROSSOVER HYSTERESIS ---
             #if p_crossover > 0.70 and not is_crossing:
@@ -406,8 +438,29 @@ def run_inference(video_path, yolo_path, pytorch_path, output_path,
         if frame_count % 30 == 0:
             print(f"Processed {frame_count} frames...")
 
+    # End-of-video finalization. If we're still inside an above-threshold run
+    # or have a pending peak whose post-window didn't fully close, count them
+    # using whatever evidence we have. Mirrors the offline evaluator's
+    # treatment of late-video peaks.
+    if in_run and run_max_idx - last_counted_idx >= DRIBBLE_MIN_GAP:
+        pre_max = 0.0
+        for idx, pc in crossover_buffer:
+            if run_max_idx - CROSSOVER_WINDOW <= idx <= run_max_idx:
+                pre_max = max(pre_max, pc)
+        total_dribbles += 1
+        last_counted_idx = run_max_idx
+        if pre_max > CROSSOVER_THRESHOLD:
+            total_crossovers += 1
+    if pending_peak is not None:
+        total_dribbles += 1
+        last_counted_idx = pending_peak['peak_idx']
+        max_cross = max(pending_peak['max_pre_cross'], pending_peak['max_post_cross'])
+        if max_cross > CROSSOVER_THRESHOLD:
+            total_crossovers += 1
+
     cap.release()
     out.release()
+    print(f"Final counts — Dribbles: {total_dribbles}  Crossovers: {total_crossovers}")
     print(f"Success! Check out your AI in action: {output_path}")
 
 if __name__ == "__main__":
