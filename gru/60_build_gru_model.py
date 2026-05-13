@@ -15,16 +15,18 @@ class HoopsDataset(Dataset):
         self.df = pd.read_csv(csv_file)
         self.window_size = window_size
         
-        # The exact 26 features the GRU will learn from. Ball_Detected (1.0
+        # The exact 31 features the GRU will learn from. Ball_Detected (1.0
         # when YOLO/tracker found the ball this frame, 0.0 otherwise) lets
         # the GRU distinguish a real (0,0) ball position from a missed
-        # detection that was filled with 0.
+        # detection that was filled with 0. The wrist Z + behind-back columns
+        # were added so the model can see depth cues for Between-the-Legs and
+        # Behind-the-Back dribbles.
         self.feature_cols = [
             "Rel_Ball_X", "Rel_Ball_Y",
             "Rel_LeftElbow_X", "Rel_LeftElbow_Y", "LeftElbow_Vis",
             "Rel_RightElbow_X", "Rel_RightElbow_Y", "RightElbow_Vis",
-            "Rel_LeftWrist_X", "Rel_LeftWrist_Y", "LeftWrist_Vis",
-            "Rel_RightWrist_X", "Rel_RightWrist_Y", "RightWrist_Vis",
+            "Rel_LeftWrist_X", "Rel_LeftWrist_Y", "Rel_LeftWrist_Z", "LeftWrist_Vis",
+            "Rel_RightWrist_X", "Rel_RightWrist_Y", "Rel_RightWrist_Z", "RightWrist_Vis",
             "Rel_LeftAnkle_X", "Rel_LeftAnkle_Y", "LeftAnkle_Vis",
             "Rel_RightAnkle_X", "Rel_RightAnkle_Y", "RightAnkle_Vis",
             "Norm_Torso_Height",
@@ -32,7 +34,10 @@ class HoopsDataset(Dataset):
             "Dist_Ball_R_Wrist",
             "Delta_Ball_Y",
             "Delta_Ball_X",
-            "Ball_Detected",        # <--- NEW (index 25)
+            "Left_Wrist_Behind",
+            "Right_Wrist_Behind",
+            "Hands_Behind_Back_Count",
+            "Ball_Detected",
         ]
         
         # Fill missing data (NaN) with 0.0 so PyTorch doesn't crash
@@ -78,7 +83,7 @@ class HoopsDataset(Dataset):
 # 2. THE MULTI-HEAD GRU MODEL (With Regularization)
 # ==========================================
 class HoopsWorldModel(nn.Module):
-    def __init__(self, input_size=26, hidden_size=64, num_layers=2):
+    def __init__(self, input_size=31, hidden_size=64, num_layers=2):
         super(HoopsWorldModel, self).__init__()
         
         self.gru = nn.GRU(
@@ -128,8 +133,8 @@ def train_model():
     torch.backends.cudnn.benchmark = False
 
     # 1. Setup File Paths (Matched to your terminal output)
-    train_csv_path = "../data/bskt/current_datasets/training_dataset_smooth_tracker.csv"
-    val_csv_path = "../data/bskt/current_datasets/validation_dataset_smooth_tracker.csv"
+    train_csv_path = "../data/bskt/current_datasets/training_dataset_smooth_tracker_z_crossover_3x.csv"
+    val_csv_path = "../data/bskt/current_datasets/validation_dataset_smooth_tracker_z.csv"
     
     print("--- PREPARING TRAINING DATA ---")
     train_dataset = HoopsDataset(csv_file=train_csv_path, window_size=15)
@@ -140,8 +145,9 @@ def train_model():
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     
-    # 2. Initialize Model (input_size=26: original 25 features + Ball_Detected)
-    model = HoopsWorldModel(input_size=26, hidden_size=64)
+    # 2. Initialize Model (input_size=31: 25 original + Ball_Detected + 5
+    # wrist-depth features added later for Between-the-Legs / Behind-the-Back).
+    model = HoopsWorldModel(input_size=31, hidden_size=64)
     
     # 3. Setup Loss Functions and Optimizer
     # reduction='none' so we can break the BCE down per action for reporting,
@@ -149,6 +155,16 @@ def train_model():
     action_criterion = nn.BCELoss(reduction='none')
     coord_criterion = nn.MSELoss()
     action_names = ["Dribble", "Crossover", "Hand_Touch"]
+
+    # Per-class decision thresholds for binarizing predictions in the F1
+    # metric. Crossover at 0.30 instead of 0.50 because (a) its precision
+    # is consistently high (~0.90), so we can afford to trade some for
+    # recall, and (b) the deployed event counters in 70_evaluate_event_
+    # counts.py and 90_test_inference.py already gate crossover at 0.30 —
+    # this keeps the reported best-F1 metric aligned with shipped behavior.
+    # Order MUST match action_names. Broadcasts against pred_actions of
+    # shape (batch_size, 3) at comparison time.
+    class_thresholds = torch.tensor([0.50, 0.30, 0.50])
     
     # Regularization 4: Weight Decay added to the optimizer!
     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
@@ -160,7 +176,7 @@ def train_model():
     best_val_f1 = -1.0
     best_loss_epoch = 0
     best_f1_epoch = 0
-    patience = 12
+    patience = 20
     epochs_since_improvement = 0
 
     print("\nStarting Training...\n")
@@ -197,15 +213,17 @@ def train_model():
             running_train_coord += loss_coord.item()
             running_train_per_action += per_action_loss.detach()
 
-            # Per-class confusion counts. Predictions thresholded at 0.5.
-            # Labels are soft (Gaussian-smoothed kernel like 0.25/0.75/1/0.75/0.25),
-            # so threshold ground truth at >=0.5 — shoulder frames (0.75) count as
-            # positive, frames at 0.25 count as negative. Avoids silently dropping
-            # shoulder frames from the metric.
+            # Per-class confusion counts. Predictions thresholded per-class
+            # via class_thresholds (Dribble/Hand_Touch at 0.50, Crossover at
+            # 0.30). Labels are soft (Gaussian-smoothed kernel like
+            # 0.25/0.75/1/0.75/0.25), so threshold ground truth at >=0.5 —
+            # shoulder frames (0.75) count as positive, frames at 0.25 count
+            # as negative. Avoids silently dropping shoulder frames from the
+            # metric.
             # Apex F1: positive = label==1.0 (peak), negative = label==0.0 (bg);
             # shoulder frames excluded. Tells us how well the model handles peaks.
             with torch.no_grad():
-                preds_bin = (pred_actions > 0.5).float()
+                preds_bin = (pred_actions > class_thresholds).float()
                 labels_bin = (y_actions >= 0.5).float()
                 train_tp += ((preds_bin == 1) & (labels_bin == 1)).sum(dim=0)
                 train_fp += ((preds_bin == 1) & (labels_bin == 0)).sum(dim=0)
@@ -241,7 +259,7 @@ def train_model():
                 running_val_coord += loss_coord.item()
                 running_val_per_action += per_action_loss
 
-                preds_bin = (pred_actions > 0.5).float()
+                preds_bin = (pred_actions > class_thresholds).float()
                 labels_bin = (y_actions >= 0.5).float()
                 val_tp += ((preds_bin == 1) & (labels_bin == 1)).sum(dim=0)
                 val_fp += ((preds_bin == 1) & (labels_bin == 0)).sum(dim=0)

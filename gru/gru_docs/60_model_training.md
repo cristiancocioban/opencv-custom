@@ -17,13 +17,23 @@ predicts both:
 - `validation_dataset_smooth_tracker.csv` (held-out for early stopping
   and metric tracking)
 
-Both CSVs must contain the same 26 feature columns and the three label
+Both CSVs must contain the same 31 feature columns and the three label
 columns (`Dribble`, `Crossover`, `Hand_Touch`) as soft Gaussian targets.
+The canonical column list lives in `10_build_dribble_dataset.py`
+(`FEATURE_COLS`) and is mirrored verbatim in `HoopsDataset.feature_cols`
+inside `60_build_gru_model.py`. **Any change in one place MUST be
+mirrored in the other** (and in `30_generate_debug.py`,
+`70_evaluate_event_counts.py`, and `90_test_inference.py`).
+
+The training CSV can optionally be the augmented `_<class>_3x.csv` produced
+by [55_augment_class.py](55_class_augmentation.md) when one action class
+is consistently lagging in val F1. The validation CSV must stay
+unaugmented so val numbers compare across runs.
 
 ## Architecture
 
 ```
-Input (15 frames × 26 features)
+Input (15 frames × 31 features)
       │
       ▼
 GRU layer 1  (hidden=64)        ─┐
@@ -117,14 +127,23 @@ val loss gap can be confidence collapse on training, not bad val accuracy.
 
 ### P / R / F1 (inclusive — labels ≥ 0.5)
 
-Predictions thresholded at 0.5; ground-truth thresholded at 0.5 (so apex
-+ ±1 shoulder frames count as positive, ±2 shoulders count as negative).
-This is the temporal-envelope metric: how well does the model's positive
-prediction period overlap with the labeled positive period?
+Predictions thresholded **per class** via `class_thresholds`
+(`[Dribble=0.50, Crossover=0.30, Hand_Touch=0.50]`). Ground-truth
+thresholded at 0.5 (so apex + ±1 shoulder frames count as positive, ±2
+shoulders count as negative). This is the temporal-envelope metric: how
+well does the model's positive prediction period overlap with the labeled
+positive period?
+
+The Crossover threshold is intentionally lower because (a) its precision
+runs ~0.90 — there's headroom to trade for recall — and (b) the deployed
+event counters in `70_evaluate_event_counts.py` and `90_test_inference.py`
+already gate Crossover at 0.30. Keeping the training metric aligned with
+shipped behavior means the best-F1 checkpoint reflects what actually runs
+at inference.
 
 ### P / R / F1 (apex — labels == 1.0)
 
-Same predictions thresholded at 0.5; ground truth requires `label == 1.0`
+Same per-class prediction thresholds; ground truth requires `label == 1.0`
 (only the peak frame is positive, only frames at exactly `0.0` are
 negative, shoulders excluded entirely from the metric). This is the peak-
 fidelity metric: how reliably does the model fire on the actual apex?

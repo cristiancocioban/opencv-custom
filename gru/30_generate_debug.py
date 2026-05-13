@@ -16,7 +16,7 @@ ROI_SIZE = 600
 
 
 class HoopsWorldModel(nn.Module):
-    def __init__(self, input_size=26, hidden_size=64, num_layers=2):
+    def __init__(self, input_size=31, hidden_size=64, num_layers=2):
         super().__init__()
         self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
         self.classifier_head = nn.Sequential(
@@ -35,10 +35,13 @@ class HoopsWorldModel(nn.Module):
 
 
 def safe_lm(landmarks, idx):
+    """Return (x, y, z, visibility) or None. MediaPipe's z is already
+    expressed relative to the hip mid-point (negative in front of the camera,
+    positive behind), so it does NOT need re-anchoring."""
     if landmarks is None:
         return None
     lm = landmarks[idx]
-    return float(lm.x), float(lm.y), float(lm.visibility)
+    return float(lm.x), float(lm.y), float(lm.z), float(lm.visibility)
 
 
 def avg_xy(a, b):
@@ -79,52 +82,82 @@ def draw_ball_box(frame, box, conf, color=(0, 255, 0)):
 
 
 def build_features(lms, idxs, ball_norm, prev_features):
-    """Build the 26-feature vector matching the world model's training contract.
+    """Build the 31-feature vector matching the world model's training contract.
 
-    Index 25 is Ball_Detected (1.0 if `ball_norm` is not None, else 0.0).
+    Index map (kept in sync with FEATURE_COLS in 10_build_dribble_dataset.py):
+      0-1   Rel_Ball_X/Y
+      2-4   Rel_LeftElbow_X/Y/Vis
+      5-7   Rel_RightElbow_X/Y/Vis
+      8-11  Rel_LeftWrist_X/Y/Z/Vis        (Z added for trick-dribble cues)
+     12-15  Rel_RightWrist_X/Y/Z/Vis
+     16-18  Rel_LeftAnkle_X/Y/Vis
+     19-21  Rel_RightAnkle_X/Y/Vis
+     22     Norm_Torso_Height
+     23     Dist_Ball_L_Wrist
+     24     Dist_Ball_R_Wrist
+     25     Delta_Ball_Y
+     26     Delta_Ball_X
+     27     Left_Wrist_Behind                (1.0 if Rel_LeftWrist_Z  > 0.05)
+     28     Right_Wrist_Behind               (1.0 if Rel_RightWrist_Z > 0.05)
+     29     Hands_Behind_Back_Count          (sum of the two above; 0/1/2)
+     30     Ball_Detected                    (1.0 if ball_norm is not None)
     """
-    features = [0.0] * 26
+    features = [0.0] * 31
     hip_center = None
     if not lms:
+        features[30] = 1.0 if ball_norm else 0.0
         return features, hip_center
 
     lhip = safe_lm(lms, idxs['LHIP'])
     rhip = safe_lm(lms, idxs['RHIP'])
     hip_center = avg_xy(lhip, rhip)
     if hip_center is None:
+        features[30] = 1.0 if ball_norm else 0.0
         return features, hip_center
 
     hcx, hcy = hip_center
 
-    def rel(lm):
-        return (lm[0] - hcx, lm[1] - hcy, lm[2]) if lm else (0.0, 0.0, 0.0)
+    def rel_xyv(lm):
+        """(x - hip_x, y - hip_y, visibility) for landmarks without depth."""
+        return (lm[0] - hcx, lm[1] - hcy, lm[3]) if lm else (0.0, 0.0, 0.0)
+
+    def rel_xyzv(lm):
+        """(x - hip_x, y - hip_y, z, visibility). MediaPipe's z is already
+        hip-relative — do NOT subtract hcz."""
+        return (lm[0] - hcx, lm[1] - hcy, lm[2], lm[3]) if lm else (0.0, 0.0, 0.0, 0.0)
 
     if ball_norm:
         features[0], features[1] = ball_norm[0] - hcx, ball_norm[1] - hcy
 
-    features[2:5]   = rel(safe_lm(lms, idxs['LELB']))
-    features[5:8]   = rel(safe_lm(lms, idxs['RELB']))
-    l_wrist = rel(safe_lm(lms, idxs['LWR']))
-    r_wrist = rel(safe_lm(lms, idxs['RWR']))
-    features[8:11]  = l_wrist
-    features[11:14] = r_wrist
-    features[14:17] = rel(safe_lm(lms, idxs['LANK']))
-    features[17:20] = rel(safe_lm(lms, idxs['RANK']))
+    features[2:5]    = rel_xyv(safe_lm(lms, idxs['LELB']))
+    features[5:8]    = rel_xyv(safe_lm(lms, idxs['RELB']))
+    l_wrist = rel_xyzv(safe_lm(lms, idxs['LWR']))
+    r_wrist = rel_xyzv(safe_lm(lms, idxs['RWR']))
+    features[8:12]   = l_wrist
+    features[12:16]  = r_wrist
+    features[16:19]  = rel_xyv(safe_lm(lms, idxs['LANK']))
+    features[19:22]  = rel_xyv(safe_lm(lms, idxs['RANK']))
 
     lsh = safe_lm(lms, idxs['LSH'])
     rsh = safe_lm(lms, idxs['RSH'])
     sh_center = avg_xy(lsh, rsh)
     if sh_center:
-        features[20] = abs(sh_center[1] - hcy)
+        features[22] = abs(sh_center[1] - hcy)
 
-    features[21] = np.sqrt((features[0] - l_wrist[0]) ** 2 + (features[1] - l_wrist[1]) ** 2)
-    features[22] = np.sqrt((features[0] - r_wrist[0]) ** 2 + (features[1] - r_wrist[1]) ** 2)
+    features[23] = np.sqrt((features[0] - l_wrist[0]) ** 2 + (features[1] - l_wrist[1]) ** 2)
+    features[24] = np.sqrt((features[0] - r_wrist[0]) ** 2 + (features[1] - r_wrist[1]) ** 2)
 
     if prev_features is not None:
-        features[23] = features[1] - prev_features[1]
-        features[24] = features[0] - prev_features[0]
+        features[25] = features[1] - prev_features[1]
+        features[26] = features[0] - prev_features[0]
 
-    features[25] = 1.0 if ball_norm else 0.0
+    # Discrete behind-back indicators. Threshold matches inject_derived_features
+    # in 10_build_dribble_dataset.py.
+    features[27] = 1.0 if l_wrist[2] > 0.05 else 0.0
+    features[28] = 1.0 if r_wrist[2] > 0.05 else 0.0
+    features[29] = features[27] + features[28]
+
+    features[30] = 1.0 if ball_norm else 0.0
 
     return features, hip_center
 
@@ -179,7 +212,7 @@ def create_debug_video(input_video_path, output_video_path, weights_path,
     if use_world_model:
         print(f"Loading world model from {world_model_path}")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        world_model = HoopsWorldModel(input_size=26)
+        world_model = HoopsWorldModel(input_size=31)
         world_model.load_state_dict(
             torch.load(world_model_path, map_location=device, weights_only=True)
         )
@@ -325,8 +358,8 @@ def create_debug_video(input_video_path, output_video_path, weights_path,
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input",       default="../raw_dribbling_videos/10_minute_home_dribbling_pound_crossover.mp4")
-    ap.add_argument("--output",      default="../raw_dribbling_videos/debug_videos/10_minute_home_dribbling_pound_crossover_debug.mp4")
+    ap.add_argument("--input",       default="../raw_dribbling_videos/crossover_06_05_03.mp4")
+    ap.add_argument("--output",      default="../raw_dribbling_videos/debug_videos/crossover_06_05_03_debug.mp4")
     ap.add_argument("--weights",     default="../models/ball_detection_v26n_640_07_04_raw.onnx")
     ap.add_argument("--world-model", default=None,
                     help="Optional GRU world-model weights (.pth). If omitted, "

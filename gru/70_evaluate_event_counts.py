@@ -19,7 +19,7 @@ from collections import deque
 # 1. MODEL CLASS (Must match training architecture exactly)
 # ==========================================
 class HoopsWorldModel(nn.Module):
-    def __init__(self, input_size=26, hidden_size=64, num_layers=2):
+    def __init__(self, input_size=31, hidden_size=64, num_layers=2):
         super(HoopsWorldModel, self).__init__()
         self.gru = nn.GRU(input_size, hidden_size, num_layers,
                           batch_first=True, dropout=0.2)
@@ -44,14 +44,14 @@ class HoopsWorldModel(nn.Module):
 
 
 # ==========================================
-# 2. FEATURES (Must match training exactly — same 26 columns, same order)
+# 2. FEATURES (Must match training exactly — same 31 columns, same order)
 # ==========================================
 FEATURE_COLS = [
     "Rel_Ball_X", "Rel_Ball_Y",
     "Rel_LeftElbow_X", "Rel_LeftElbow_Y", "LeftElbow_Vis",
     "Rel_RightElbow_X", "Rel_RightElbow_Y", "RightElbow_Vis",
-    "Rel_LeftWrist_X", "Rel_LeftWrist_Y", "LeftWrist_Vis",
-    "Rel_RightWrist_X", "Rel_RightWrist_Y", "RightWrist_Vis",
+    "Rel_LeftWrist_X", "Rel_LeftWrist_Y", "Rel_LeftWrist_Z", "LeftWrist_Vis",
+    "Rel_RightWrist_X", "Rel_RightWrist_Y", "Rel_RightWrist_Z", "RightWrist_Vis",
     "Rel_LeftAnkle_X", "Rel_LeftAnkle_Y", "LeftAnkle_Vis",
     "Rel_RightAnkle_X", "Rel_RightAnkle_Y", "RightAnkle_Vis",
     "Norm_Torso_Height",
@@ -59,6 +59,9 @@ FEATURE_COLS = [
     "Dist_Ball_R_Wrist",
     "Delta_Ball_Y",
     "Delta_Ball_X",
+    "Left_Wrist_Behind",
+    "Right_Wrist_Behind",
+    "Hands_Behind_Back_Count",
     "Ball_Detected",
 ]
 
@@ -210,7 +213,7 @@ def count_predicted_events_peaks(probs,
 # ==========================================
 def evaluate(csv_path, model_path):
     print(f"Loading model from {model_path}...")
-    model = HoopsWorldModel(input_size=26)
+    model = HoopsWorldModel(input_size=31)
     model.load_state_dict(torch.load(model_path, weights_only=True))
     model.eval()
 
@@ -297,7 +300,7 @@ def evaluate(csv_path, model_path):
 
 if __name__ == "__main__":
     # --- CHANGE THESE PATHS TO MATCH YOUR FILES ---
-    CSV_PATH = "../data/bskt/current_datasets/validation_dataset_smooth_tracker.csv"
+    CSV_PATH = "../data/bskt/current_datasets/validation_dataset_smooth_tracker_z.csv"
     MODEL_PATH = "../models/hoops_world_model_best_f1.pth"
 
     evaluate(CSV_PATH, MODEL_PATH)

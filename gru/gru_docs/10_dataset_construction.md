@@ -59,10 +59,16 @@ landmark-derived features stay `NaN` and are filled with `0.0` later.
 
 ### 4. Feature computation
 
-For each tracked landmark (left/right elbow, wrist, ankle), three values
-are stored: `(x - hip_x, y - hip_y, visibility)`. The visibility comes
-straight from MediaPipe — we deliberately do NOT threshold it, so the GRU
-learns to trust or distrust each landmark based on its raw confidence.
+For each tracked landmark (left/right elbow, ankle), three values
+are stored: `(x - hip_x, y - hip_y, visibility)`. For each wrist, a fourth
+value is stored — `Rel_{Left,Right}Wrist_Z` — pulled directly from
+MediaPipe. MediaPipe's `z` is already expressed **relative to the hip
+mid-point** (negative in front of the camera, positive behind), so it does
+NOT need to be re-anchored against `hip_center` the way `x` and `y` are.
+
+The visibility comes straight from MediaPipe — we deliberately do NOT
+threshold it, so the GRU learns to trust or distrust each landmark based
+on its raw confidence.
 
 The ball center is also stored relative to the hip (`Rel_Ball_X`,
 `Rel_Ball_Y`).
@@ -74,8 +80,8 @@ camera-distance-tolerant scale.
 
 ### 5. Derived features (post-hoc, in `inject_derived_features`)
 
-After all per-frame rows are gathered, four extra features are computed
-from the time-series:
+After all per-frame rows are gathered, the following extra features are
+computed from the time-series:
 
 - `Dist_Ball_L_Wrist`, `Dist_Ball_R_Wrist`: Euclidean distance from ball to
   each wrist (in the hip-relative frame). Strong signal for `Hand_Touch`.
@@ -85,6 +91,17 @@ from the time-series:
   rather than a NaN that gets silently mapped to 0. The GRU sees
   `Ball_Detected` separately, so it can learn to distrust velocity values
   that came from filled frames.
+- `Left_Wrist_Behind`, `Right_Wrist_Behind`: discrete indicators set to
+  `1.0` when the corresponding wrist's `Rel_Wrist_Z` exceeds `+0.05`
+  (i.e. the wrist has crossed behind the hip plane), `0.0` otherwise. The
+  `0.05` threshold ignores noise around `z = 0` from imperfect pose
+  tracking. Designed as the primary cue for **Behind-the-Back** dribbles.
+- `Hands_Behind_Back_Count`: sum of the two indicators above (`0`, `1`,
+  or `2`). A two-hand crossover **in front** of the body should keep this
+  at `0`; a Behind-the-Back move briefly drives it to `1` (and rarely `2`)
+  as the dribbling hand sweeps behind the torso. Combined with the
+  Between-the-Legs cue (low `Rel_Ball_Y` with both wrists in front), this
+  pair lets the GRU disambiguate the two trick-dribble classes.
 
 ### 6. The Ball_Detected flag
 
@@ -96,39 +113,48 @@ identical to a frame where the ball *really is* at the hip center. This
 ambiguity poisons the gradient. The flag lets the GRU treat (0, 0) at
 `Ball_Detected = 0` differently from (0, 0) at `Ball_Detected = 1`.
 
-## The 26 features (final feature vector)
+## The 31 features (final feature vector)
 
 Order matters and must be identical across training, evaluation, and
-inference. Indices 0–24 came from the original feature design; index 25
-was added later when the missed-detection ambiguity was discovered.
+inference. The original 25 features (now reshuffled within the table)
+were the body-pose + ball-position + 2D-velocity set; `Ball_Detected`
+was added later to fix the missed-detection ambiguity; the wrist-depth
+columns (`Rel_LeftWrist_Z`, `Rel_RightWrist_Z`, `Left_Wrist_Behind`,
+`Right_Wrist_Behind`, `Hands_Behind_Back_Count`) were added when
+Between-the-Legs and Behind-the-Back recognition was introduced.
 
 ```
- 0  Rel_Ball_X              ball x relative to hip (normalized)
- 1  Rel_Ball_Y              ball y relative to hip
+ 0  Rel_Ball_X                ball x relative to hip (normalized)
+ 1  Rel_Ball_Y                ball y relative to hip
  2  Rel_LeftElbow_X
  3  Rel_LeftElbow_Y
- 4  LeftElbow_Vis           MediaPipe visibility, raw
+ 4  LeftElbow_Vis             MediaPipe visibility, raw
  5  Rel_RightElbow_X
  6  Rel_RightElbow_Y
  7  RightElbow_Vis
  8  Rel_LeftWrist_X
  9  Rel_LeftWrist_Y
-10  LeftWrist_Vis
-11  Rel_RightWrist_X
-12  Rel_RightWrist_Y
-13  RightWrist_Vis
-14  Rel_LeftAnkle_X
-15  Rel_LeftAnkle_Y
-16  LeftAnkle_Vis
-17  Rel_RightAnkle_X
-18  Rel_RightAnkle_Y
-19  RightAnkle_Vis
-20  Norm_Torso_Height       implicit scale normalizer
-21  Dist_Ball_L_Wrist
-22  Dist_Ball_R_Wrist
-23  Delta_Ball_Y            forward-filled velocity
-24  Delta_Ball_X
-25  Ball_Detected           1.0 if YOLO/tracker found ball this frame
+10  Rel_LeftWrist_Z           MediaPipe z, hip-relative (+ = behind body)
+11  LeftWrist_Vis
+12  Rel_RightWrist_X
+13  Rel_RightWrist_Y
+14  Rel_RightWrist_Z          MediaPipe z, hip-relative (+ = behind body)
+15  RightWrist_Vis
+16  Rel_LeftAnkle_X
+17  Rel_LeftAnkle_Y
+18  LeftAnkle_Vis
+19  Rel_RightAnkle_X
+20  Rel_RightAnkle_Y
+21  RightAnkle_Vis
+22  Norm_Torso_Height         implicit scale normalizer
+23  Dist_Ball_L_Wrist
+24  Dist_Ball_R_Wrist
+25  Delta_Ball_Y              forward-filled velocity
+26  Delta_Ball_X
+27  Left_Wrist_Behind         1.0 if Rel_LeftWrist_Z > 0.05
+28  Right_Wrist_Behind        1.0 if Rel_RightWrist_Z > 0.05
+29  Hands_Behind_Back_Count   sum of the two indicators (0/1/2)
+30  Ball_Detected             1.0 if YOLO/tracker found ball this frame
 ```
 
 If you ever reorder, add, or remove features, you MUST regenerate the

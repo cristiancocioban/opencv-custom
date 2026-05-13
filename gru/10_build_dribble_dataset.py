@@ -54,31 +54,33 @@ CSV_COLUMNS = [
     "Rel_Ball_X", "Rel_Ball_Y",
     "Rel_LeftElbow_X", "Rel_LeftElbow_Y", "LeftElbow_Vis",
     "Rel_RightElbow_X", "Rel_RightElbow_Y", "RightElbow_Vis",
-    "Rel_LeftWrist_X", "Rel_LeftWrist_Y", "LeftWrist_Vis",
-    "Rel_RightWrist_X", "Rel_RightWrist_Y", "RightWrist_Vis",
+    "Rel_LeftWrist_X", "Rel_LeftWrist_Y", "Rel_LeftWrist_Z", "LeftWrist_Vis",
+    "Rel_RightWrist_X", "Rel_RightWrist_Y", "Rel_RightWrist_Z", "RightWrist_Vis",
     "Rel_LeftAnkle_X", "Rel_LeftAnkle_Y", "LeftAnkle_Vis",
     "Rel_RightAnkle_X", "Rel_RightAnkle_Y", "RightAnkle_Vis",
     "Dist_Ball_L_Wrist", "Dist_Ball_R_Wrist",
     "Delta_Ball_Y", "Delta_Ball_X",
+    "Left_Wrist_Behind", "Right_Wrist_Behind", "Hands_Behind_Back_Count",
     "Dribble", "Crossover", "Hand_Touch",
     "Ball_Detected",
 ]
 
 # Order MUST match HoopsDataset.feature_cols in 60_build_gru_model.py.
-# Ball_Detected is appended at index 25 (1.0 if YOLO/tracker found the ball this
+# Ball_Detected is appended at the end (1.0 if YOLO/tracker found the ball this
 # frame, 0.0 otherwise). This lets the GRU distinguish a real (0,0) ball
 # position from a missed detection that was filled with 0.
 FEATURE_COLS = [
     "Rel_Ball_X", "Rel_Ball_Y",
     "Rel_LeftElbow_X", "Rel_LeftElbow_Y", "LeftElbow_Vis",
     "Rel_RightElbow_X", "Rel_RightElbow_Y", "RightElbow_Vis",
-    "Rel_LeftWrist_X", "Rel_LeftWrist_Y", "LeftWrist_Vis",
-    "Rel_RightWrist_X", "Rel_RightWrist_Y", "RightWrist_Vis",
+    "Rel_LeftWrist_X", "Rel_LeftWrist_Y", "Rel_LeftWrist_Z", "LeftWrist_Vis",
+    "Rel_RightWrist_X", "Rel_RightWrist_Y", "Rel_RightWrist_Z", "RightWrist_Vis",
     "Rel_LeftAnkle_X", "Rel_LeftAnkle_Y", "LeftAnkle_Vis",
     "Rel_RightAnkle_X", "Rel_RightAnkle_Y", "RightAnkle_Vis",
     "Norm_Torso_Height",
     "Dist_Ball_L_Wrist", "Dist_Ball_R_Wrist",
     "Delta_Ball_Y", "Delta_Ball_X",
+    "Left_Wrist_Behind", "Right_Wrist_Behind", "Hands_Behind_Back_Count",
     "Ball_Detected",
 ]
 
@@ -95,7 +97,7 @@ class HoopsWorldModel(nn.Module):
     """Architecture must match 5_build_gru_model.py exactly so the saved
     state_dict loads cleanly."""
 
-    def __init__(self, input_size: int = 26, hidden_size: int = 64, num_layers: int = 2):
+    def __init__(self, input_size: int = 31, hidden_size: int = 64, num_layers: int = 2):
         super().__init__()
         self.gru = nn.GRU(
             input_size=input_size,
@@ -197,19 +199,33 @@ def inject_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     df["Delta_Ball_Y"] = ball_y_ff.groupby(df["Video_ID"]).diff().fillna(0.0)
     df["Delta_Ball_X"] = ball_x_ff.groupby(df["Video_ID"]).diff().fillna(0.0)
 
+    # Discrete "wrist is behind the hip plane" indicators. MediaPipe's z is
+    # negative in front of the camera and positive behind, anchored at the
+    # hip mid-point, so a positive value past a small threshold means the
+    # wrist has actually crossed behind the player's torso. The 0.05 threshold
+    # ignores noise around z = 0 from imperfect pose tracking.
+    df["Left_Wrist_Behind"]       = (df["Rel_LeftWrist_Z"]  > 0.05).astype(float)
+    df["Right_Wrist_Behind"]      = (df["Rel_RightWrist_Z"] > 0.05).astype(float)
+    df["Hands_Behind_Back_Count"] = df["Left_Wrist_Behind"] + df["Right_Wrist_Behind"]
+
     # Make sure missing detections have explicit zero rather than NaN.
     df["Ball_Detected"] = df["Ball_Detected"].fillna(0.0)
     return df
 
 
-def safe_landmark(landmarks, idx: int) -> Optional[tuple[float, float, float]]:
-    """Return (x, y, visibility) or None if the landmark is missing."""
+def safe_landmark(landmarks, idx: int) -> Optional[tuple[float, float, float, float]]:
+    """Return (x, y, z, visibility) or None if the landmark is missing.
+
+    MediaPipe's z is already expressed relative to the hip mid-point (negative
+    in front of the camera, positive behind), so it does NOT need to be
+    re-anchored against the hip center the way x/y are.
+    """
     if landmarks is None:
         return None
     lm = landmarks[idx]
-    # We removed the visibility filter here so the raw confidence score 
+    # We removed the visibility filter here so the raw confidence score
     # gets saved to the CSV for the AI to learn from!
-    return (float(lm.x), float(lm.y), float(lm.visibility))
+    return (float(lm.x), float(lm.y), float(lm.z), float(lm.visibility))
 
 
 def avg_xy(a, b) -> Optional[tuple[float, float]]:
@@ -348,29 +364,32 @@ def process_video(video_path: Path,
                 if lelb is not None:
                     row["Rel_LeftElbow_X"]  = lelb[0] - hcx
                     row["Rel_LeftElbow_Y"]  = lelb[1] - hcy
-                    row["LeftElbow_Vis"]    = lelb[2]
+                    row["LeftElbow_Vis"]    = lelb[3]
                 if relb is not None:
                     row["Rel_RightElbow_X"] = relb[0] - hcx
                     row["Rel_RightElbow_Y"] = relb[1] - hcy
-                    row["RightElbow_Vis"]   = relb[2]
+                    row["RightElbow_Vis"]   = relb[3]
 
                 if lwr is not None:
                     row["Rel_LeftWrist_X"]  = lwr[0] - hcx
                     row["Rel_LeftWrist_Y"]  = lwr[1] - hcy
-                    row["LeftWrist_Vis"]    = lwr[2]
+                    # MediaPipe's z is already hip-relative; do not subtract hcz.
+                    row["Rel_LeftWrist_Z"]  = lwr[2]
+                    row["LeftWrist_Vis"]    = lwr[3]
                 if rwr is not None:
                     row["Rel_RightWrist_X"] = rwr[0] - hcx
                     row["Rel_RightWrist_Y"] = rwr[1] - hcy
-                    row["RightWrist_Vis"]   = rwr[2]
+                    row["Rel_RightWrist_Z"] = rwr[2]
+                    row["RightWrist_Vis"]   = rwr[3]
 
                 if lank is not None:
                     row["Rel_LeftAnkle_X"]  = lank[0] - hcx
                     row["Rel_LeftAnkle_Y"]  = lank[1] - hcy
-                    row["LeftAnkle_Vis"]    = lank[2]
+                    row["LeftAnkle_Vis"]    = lank[3]
                 if rank is not None:
                     row["Rel_RightAnkle_X"] = rank[0] - hcx
                     row["Rel_RightAnkle_Y"] = rank[1] - hcy
-                    row["RightAnkle_Vis"]   = rank[2]
+                    row["RightAnkle_Vis"]   = rank[3]
         else:
             log.debug("No pose in %s frame %d", video_path.name, frame_id)
 
