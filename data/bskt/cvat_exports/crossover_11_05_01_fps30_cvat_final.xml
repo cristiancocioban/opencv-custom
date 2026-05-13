@@ -1,0 +1,1278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <job>
+      <id>35</id>
+      <size>347</size>
+      <mode>interpolation</mode>
+      <overlap>5</overlap>
+      <bugtracker></bugtracker>
+      <created>2026-05-13 02:54:04.937872+00:00</created>
+      <updated>2026-05-13 03:06:19.754053+00:00</updated>
+      <subset>default</subset>
+      <start_frame>0</start_frame>
+      <stop_frame>346</stop_frame>
+      <frame_filter></frame_filter>
+      <segments>
+        <segment>
+          <id>35</id>
+          <start>0</start>
+          <stop>346</stop>
+          <url>http://localhost:8080/api/jobs/35/dataset/export/api/jobs/35</url>
+        </segment>
+      </segments>
+      <owner>
+        <username>cristian</username>
+        <email>cristian.cocioban@gmail.com</email>
+      </owner>
+      <assignee></assignee>
+      <labels>
+        <label>
+          <name>Dribble</name>
+          <color>#34d1b7</color>
+          <type>tag</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>Crossover</name>
+          <color>#2a7dd1</color>
+          <type>tag</type>
+          <attributes>
+          </attributes>
+        </label>
+        <label>
+          <name>Hand_Touch</name>
+          <color>#ffcc33</color>
+          <type>tag</type>
+          <attributes>
+          </attributes>
+        </label>
+      </labels>
+    </job>
+    <dumped>2026-05-13 03:06:58.312111+00:00</dumped>
+    <original_size>
+      <width>2360</width>
+      <height>1640</height>
+    </original_size>
+  </meta>
+  <image id="0" name="frame_000000" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="1" name="frame_000001" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="2" name="frame_000002" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="3" name="frame_000003" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="4" name="frame_000004" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="5" name="frame_000005" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="6" name="frame_000006" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="7" name="frame_000007" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="8" name="frame_000008" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="9" name="frame_000009" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="10" name="frame_000010" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="11" name="frame_000011" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="12" name="frame_000012" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="13" name="frame_000013" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="14" name="frame_000014" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="15" name="frame_000015" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="16" name="frame_000016" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="17" name="frame_000017" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="18" name="frame_000018" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="19" name="frame_000019" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="20" name="frame_000020" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="21" name="frame_000021" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="22" name="frame_000022" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="23" name="frame_000023" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="24" name="frame_000024" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="25" name="frame_000025" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="26" name="frame_000026" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="27" name="frame_000027" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="28" name="frame_000028" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="29" name="frame_000029" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="30" name="frame_000030" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="31" name="frame_000031" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="32" name="frame_000032" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="33" name="frame_000033" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="34" name="frame_000034" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="35" name="frame_000035" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="36" name="frame_000036" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="37" name="frame_000037" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="38" name="frame_000038" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="39" name="frame_000039" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="40" name="frame_000040" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="41" name="frame_000041" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="42" name="frame_000042" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="43" name="frame_000043" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="44" name="frame_000044" width="2360" height="1640">
+  </image>
+  <image id="45" name="frame_000045" width="2360" height="1640">
+  </image>
+  <image id="46" name="frame_000046" width="2360" height="1640">
+  </image>
+  <image id="47" name="frame_000047" width="2360" height="1640">
+  </image>
+  <image id="48" name="frame_000048" width="2360" height="1640">
+  </image>
+  <image id="49" name="frame_000049" width="2360" height="1640">
+  </image>
+  <image id="50" name="frame_000050" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="51" name="frame_000051" width="2360" height="1640">
+  </image>
+  <image id="52" name="frame_000052" width="2360" height="1640">
+  </image>
+  <image id="53" name="frame_000053" width="2360" height="1640">
+  </image>
+  <image id="54" name="frame_000054" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="55" name="frame_000055" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="56" name="frame_000056" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="57" name="frame_000057" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="58" name="frame_000058" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="59" name="frame_000059" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="60" name="frame_000060" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="61" name="frame_000061" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="62" name="frame_000062" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="63" name="frame_000063" width="2360" height="1640">
+  </image>
+  <image id="64" name="frame_000064" width="2360" height="1640">
+  </image>
+  <image id="65" name="frame_000065" width="2360" height="1640">
+  </image>
+  <image id="66" name="frame_000066" width="2360" height="1640">
+  </image>
+  <image id="67" name="frame_000067" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="68" name="frame_000068" width="2360" height="1640">
+  </image>
+  <image id="69" name="frame_000069" width="2360" height="1640">
+  </image>
+  <image id="70" name="frame_000070" width="2360" height="1640">
+  </image>
+  <image id="71" name="frame_000071" width="2360" height="1640">
+  </image>
+  <image id="72" name="frame_000072" width="2360" height="1640">
+  </image>
+  <image id="73" name="frame_000073" width="2360" height="1640">
+  </image>
+  <image id="74" name="frame_000074" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="75" name="frame_000075" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="76" name="frame_000076" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="77" name="frame_000077" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="78" name="frame_000078" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="79" name="frame_000079" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="80" name="frame_000080" width="2360" height="1640">
+  </image>
+  <image id="81" name="frame_000081" width="2360" height="1640">
+  </image>
+  <image id="82" name="frame_000082" width="2360" height="1640">
+  </image>
+  <image id="83" name="frame_000083" width="2360" height="1640">
+  </image>
+  <image id="84" name="frame_000084" width="2360" height="1640">
+  </image>
+  <image id="85" name="frame_000085" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="86" name="frame_000086" width="2360" height="1640">
+  </image>
+  <image id="87" name="frame_000087" width="2360" height="1640">
+  </image>
+  <image id="88" name="frame_000088" width="2360" height="1640">
+  </image>
+  <image id="89" name="frame_000089" width="2360" height="1640">
+  </image>
+  <image id="90" name="frame_000090" width="2360" height="1640">
+  </image>
+  <image id="91" name="frame_000091" width="2360" height="1640">
+  </image>
+  <image id="92" name="frame_000092" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="93" name="frame_000093" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="94" name="frame_000094" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="95" name="frame_000095" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="96" name="frame_000096" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="97" name="frame_000097" width="2360" height="1640">
+  </image>
+  <image id="98" name="frame_000098" width="2360" height="1640">
+    <tag label="Dribble" source="manual">
+    </tag>
+  </image>
+  <image id="99" name="frame_000099" width="2360" height="1640">
+  </image>
+  <image id="100" name="frame_000100" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="101" name="frame_000101" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="102" name="frame_000102" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="103" name="frame_000103" width="2360" height="1640">
+  </image>
+  <image id="104" name="frame_000104" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="105" name="frame_000105" width="2360" height="1640">
+  </image>
+  <image id="106" name="frame_000106" width="2360" height="1640">
+  </image>
+  <image id="107" name="frame_000107" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="108" name="frame_000108" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="109" name="frame_000109" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="110" name="frame_000110" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="111" name="frame_000111" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="112" name="frame_000112" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="113" name="frame_000113" width="2360" height="1640">
+  </image>
+  <image id="114" name="frame_000114" width="2360" height="1640">
+  </image>
+  <image id="115" name="frame_000115" width="2360" height="1640">
+    <tag label="Crossover" source="manual">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="116" name="frame_000116" width="2360" height="1640">
+  </image>
+  <image id="117" name="frame_000117" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="118" name="frame_000118" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="119" name="frame_000119" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="120" name="frame_000120" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="121" name="frame_000121" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="122" name="frame_000122" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="123" name="frame_000123" width="2360" height="1640">
+  </image>
+  <image id="124" name="frame_000124" width="2360" height="1640">
+    <tag label="Crossover" source="file">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="125" name="frame_000125" width="2360" height="1640">
+  </image>
+  <image id="126" name="frame_000126" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="127" name="frame_000127" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="128" name="frame_000128" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="129" name="frame_000129" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="130" name="frame_000130" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="131" name="frame_000131" width="2360" height="1640">
+  </image>
+  <image id="132" name="frame_000132" width="2360" height="1640">
+    <tag label="Crossover" source="file">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="133" name="frame_000133" width="2360" height="1640">
+  </image>
+  <image id="134" name="frame_000134" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="135" name="frame_000135" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="136" name="frame_000136" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="137" name="frame_000137" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="138" name="frame_000138" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="139" name="frame_000139" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="140" name="frame_000140" width="2360" height="1640">
+  </image>
+  <image id="141" name="frame_000141" width="2360" height="1640">
+    <tag label="Crossover" source="file">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="142" name="frame_000142" width="2360" height="1640">
+  </image>
+  <image id="143" name="frame_000143" width="2360" height="1640">
+  </image>
+  <image id="144" name="frame_000144" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="145" name="frame_000145" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="146" name="frame_000146" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="147" name="frame_000147" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="148" name="frame_000148" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="149" name="frame_000149" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="150" name="frame_000150" width="2360" height="1640">
+  </image>
+  <image id="151" name="frame_000151" width="2360" height="1640">
+    <tag label="Crossover" source="manual">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="152" name="frame_000152" width="2360" height="1640">
+  </image>
+  <image id="153" name="frame_000153" width="2360" height="1640">
+  </image>
+  <image id="154" name="frame_000154" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="155" name="frame_000155" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="156" name="frame_000156" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="157" name="frame_000157" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="158" name="frame_000158" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="159" name="frame_000159" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="160" name="frame_000160" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="161" name="frame_000161" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="162" name="frame_000162" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="163" name="frame_000163" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="164" name="frame_000164" width="2360" height="1640">
+  </image>
+  <image id="165" name="frame_000165" width="2360" height="1640">
+  </image>
+  <image id="166" name="frame_000166" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="167" name="frame_000167" width="2360" height="1640">
+  </image>
+  <image id="168" name="frame_000168" width="2360" height="1640">
+    <tag label="Hand_Touch" source="manual">
+    </tag>
+  </image>
+  <image id="169" name="frame_000169" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="170" name="frame_000170" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="171" name="frame_000171" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="172" name="frame_000172" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="173" name="frame_000173" width="2360" height="1640">
+  </image>
+  <image id="174" name="frame_000174" width="2360" height="1640">
+  </image>
+  <image id="175" name="frame_000175" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="176" name="frame_000176" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="177" name="frame_000177" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="178" name="frame_000178" width="2360" height="1640">
+  </image>
+  <image id="179" name="frame_000179" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="180" name="frame_000180" width="2360" height="1640">
+  </image>
+  <image id="181" name="frame_000181" width="2360" height="1640">
+  </image>
+  <image id="182" name="frame_000182" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="183" name="frame_000183" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="184" name="frame_000184" width="2360" height="1640">
+  </image>
+  <image id="185" name="frame_000185" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="186" name="frame_000186" width="2360" height="1640">
+  </image>
+  <image id="187" name="frame_000187" width="2360" height="1640">
+  </image>
+  <image id="188" name="frame_000188" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="189" name="frame_000189" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="190" name="frame_000190" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="191" name="frame_000191" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="192" name="frame_000192" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="193" name="frame_000193" width="2360" height="1640">
+  </image>
+  <image id="194" name="frame_000194" width="2360" height="1640">
+    <tag label="Crossover" source="file">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="195" name="frame_000195" width="2360" height="1640">
+  </image>
+  <image id="196" name="frame_000196" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="197" name="frame_000197" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="198" name="frame_000198" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="199" name="frame_000199" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="200" name="frame_000200" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="201" name="frame_000201" width="2360" height="1640">
+  </image>
+  <image id="202" name="frame_000202" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+    <tag label="Crossover" source="file">
+    </tag>
+  </image>
+  <image id="203" name="frame_000203" width="2360" height="1640">
+  </image>
+  <image id="204" name="frame_000204" width="2360" height="1640">
+  </image>
+  <image id="205" name="frame_000205" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="206" name="frame_000206" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="207" name="frame_000207" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="208" name="frame_000208" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="209" name="frame_000209" width="2360" height="1640">
+  </image>
+  <image id="210" name="frame_000210" width="2360" height="1640">
+    <tag label="Dribble" source="manual">
+    </tag>
+    <tag label="Crossover" source="manual">
+    </tag>
+  </image>
+  <image id="211" name="frame_000211" width="2360" height="1640">
+  </image>
+  <image id="212" name="frame_000212" width="2360" height="1640">
+  </image>
+  <image id="213" name="frame_000213" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="214" name="frame_000214" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="215" name="frame_000215" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="216" name="frame_000216" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="217" name="frame_000217" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="218" name="frame_000218" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="219" name="frame_000219" width="2360" height="1640">
+  </image>
+  <image id="220" name="frame_000220" width="2360" height="1640">
+    <tag label="Crossover" source="manual">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="221" name="frame_000221" width="2360" height="1640">
+  </image>
+  <image id="222" name="frame_000222" width="2360" height="1640">
+  </image>
+  <image id="223" name="frame_000223" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="224" name="frame_000224" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="225" name="frame_000225" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="226" name="frame_000226" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="227" name="frame_000227" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="228" name="frame_000228" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="229" name="frame_000229" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="230" name="frame_000230" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="231" name="frame_000231" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="232" name="frame_000232" width="2360" height="1640">
+  </image>
+  <image id="233" name="frame_000233" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="234" name="frame_000234" width="2360" height="1640">
+  </image>
+  <image id="235" name="frame_000235" width="2360" height="1640">
+  </image>
+  <image id="236" name="frame_000236" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="237" name="frame_000237" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="238" name="frame_000238" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="239" name="frame_000239" width="2360" height="1640">
+  </image>
+  <image id="240" name="frame_000240" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="241" name="frame_000241" width="2360" height="1640">
+  </image>
+  <image id="242" name="frame_000242" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="243" name="frame_000243" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="244" name="frame_000244" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="245" name="frame_000245" width="2360" height="1640">
+  </image>
+  <image id="246" name="frame_000246" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="247" name="frame_000247" width="2360" height="1640">
+  </image>
+  <image id="248" name="frame_000248" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="249" name="frame_000249" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="250" name="frame_000250" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="251" name="frame_000251" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="252" name="frame_000252" width="2360" height="1640">
+  </image>
+  <image id="253" name="frame_000253" width="2360" height="1640">
+    <tag label="Dribble" source="manual">
+    </tag>
+    <tag label="Crossover" source="manual">
+    </tag>
+  </image>
+  <image id="254" name="frame_000254" width="2360" height="1640">
+  </image>
+  <image id="255" name="frame_000255" width="2360" height="1640">
+  </image>
+  <image id="256" name="frame_000256" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="257" name="frame_000257" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="258" name="frame_000258" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="259" name="frame_000259" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="260" name="frame_000260" width="2360" height="1640">
+  </image>
+  <image id="261" name="frame_000261" width="2360" height="1640">
+  </image>
+  <image id="262" name="frame_000262" width="2360" height="1640">
+    <tag label="Crossover" source="file">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="263" name="frame_000263" width="2360" height="1640">
+  </image>
+  <image id="264" name="frame_000264" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="265" name="frame_000265" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="266" name="frame_000266" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="267" name="frame_000267" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="268" name="frame_000268" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="269" name="frame_000269" width="2360" height="1640">
+  </image>
+  <image id="270" name="frame_000270" width="2360" height="1640">
+    <tag label="Crossover" source="file">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="271" name="frame_000271" width="2360" height="1640">
+  </image>
+  <image id="272" name="frame_000272" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="273" name="frame_000273" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="274" name="frame_000274" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="275" name="frame_000275" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="276" name="frame_000276" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="277" name="frame_000277" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="278" name="frame_000278" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="279" name="frame_000279" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="280" name="frame_000280" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="281" name="frame_000281" width="2360" height="1640">
+  </image>
+  <image id="282" name="frame_000282" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="283" name="frame_000283" width="2360" height="1640">
+  </image>
+  <image id="284" name="frame_000284" width="2360" height="1640">
+  </image>
+  <image id="285" name="frame_000285" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="286" name="frame_000286" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="287" name="frame_000287" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="288" name="frame_000288" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="289" name="frame_000289" width="2360" height="1640">
+  </image>
+  <image id="290" name="frame_000290" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="291" name="frame_000291" width="2360" height="1640">
+  </image>
+  <image id="292" name="frame_000292" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="293" name="frame_000293" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="294" name="frame_000294" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="295" name="frame_000295" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="296" name="frame_000296" width="2360" height="1640">
+  </image>
+  <image id="297" name="frame_000297" width="2360" height="1640">
+    <tag label="Crossover" source="file">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="298" name="frame_000298" width="2360" height="1640">
+  </image>
+  <image id="299" name="frame_000299" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="300" name="frame_000300" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="301" name="frame_000301" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="302" name="frame_000302" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="303" name="frame_000303" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="304" name="frame_000304" width="2360" height="1640">
+  </image>
+  <image id="305" name="frame_000305" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+    <tag label="Crossover" source="file">
+    </tag>
+  </image>
+  <image id="306" name="frame_000306" width="2360" height="1640">
+  </image>
+  <image id="307" name="frame_000307" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="308" name="frame_000308" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="309" name="frame_000309" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="310" name="frame_000310" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="311" name="frame_000311" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="312" name="frame_000312" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="313" name="frame_000313" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="314" name="frame_000314" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="315" name="frame_000315" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="316" name="frame_000316" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="317" name="frame_000317" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="318" name="frame_000318" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="319" name="frame_000319" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="320" name="frame_000320" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="321" name="frame_000321" width="2360" height="1640">
+  </image>
+  <image id="322" name="frame_000322" width="2360" height="1640">
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="323" name="frame_000323" width="2360" height="1640">
+  </image>
+  <image id="324" name="frame_000324" width="2360" height="1640">
+  </image>
+  <image id="325" name="frame_000325" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="326" name="frame_000326" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="327" name="frame_000327" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="328" name="frame_000328" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="329" name="frame_000329" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="330" name="frame_000330" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="331" name="frame_000331" width="2360" height="1640">
+  </image>
+  <image id="332" name="frame_000332" width="2360" height="1640">
+  </image>
+  <image id="333" name="frame_000333" width="2360" height="1640">
+    <tag label="Crossover" source="manual">
+    </tag>
+    <tag label="Dribble" source="file">
+    </tag>
+  </image>
+  <image id="334" name="frame_000334" width="2360" height="1640">
+  </image>
+  <image id="335" name="frame_000335" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="336" name="frame_000336" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="337" name="frame_000337" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="338" name="frame_000338" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="339" name="frame_000339" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="340" name="frame_000340" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="341" name="frame_000341" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="342" name="frame_000342" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="343" name="frame_000343" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="344" name="frame_000344" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="345" name="frame_000345" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+  <image id="346" name="frame_000346" width="2360" height="1640">
+    <tag label="Hand_Touch" source="file">
+    </tag>
+  </image>
+</annotations>

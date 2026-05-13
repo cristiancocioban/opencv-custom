@@ -24,6 +24,11 @@ End-to-end pipeline for detecting and counting basketball ball-handling events
 [50] apply_smoothing.py           ──►  training_dataset_smooth.csv
          │                              (Gaussian-shaped soft labels)
          │
+         │  (optional)
+         ▼
+[55] augment_class.py             ──►  training_dataset_smooth_<class>_3x.csv
+         │                              (3x copies of one class's videos)
+         │
          ▼
 [60] build_gru_model.py           ──►  hoops_world_model_best.pth
          │                              hoops_world_model_best_f1.pth
@@ -40,6 +45,7 @@ End-to-end pipeline for detecting and counting basketball ball-handling events
 | 1 | `10_build_dribble_dataset.py` | [10_dataset_construction.md](10_dataset_construction.md) | Extract ball + pose features per frame |
 | 2 | `40_merge_ground_truth.py` | [40_merge_ground_truth.md](40_merge_ground_truth.md) | Overlay manual CVAT labels onto features |
 | 3 | `50_apply_smoothing.py` | [50_smoothing.md](50_smoothing.md) | Convert hard labels into Gaussian soft targets |
+| 3b *(opt)* | `55_augment_class.py` | [55_class_augmentation.md](55_class_augmentation.md) | Triple one class's videos via mirror + noise + scale jitter |
 | 4 | `60_build_gru_model.py` | [60_model_training.md](60_model_training.md) | Train the multi-head GRU |
 | 5 | `70_evaluate_event_counts.py` | [70_evaluation.md](70_evaluation.md) | Measure event-count accuracy |
 
@@ -82,8 +88,9 @@ data/bskt/
   training_dataset.csv                      ← step 2 output (with hard labels)
   training_dataset_smooth.csv               ← step 3 output (with soft labels)
   current_datasets/
-    training_dataset_smooth_tracker.csv     ← active training input for step 4
-    validation_dataset_smooth_tracker.csv   ← active validation input
+    training_dataset_smooth_tracker.csv               ← active training input for step 4
+    validation_dataset_smooth_tracker.csv             ← active validation input
+    training_dataset_smooth_tracker_<class>_3x.csv    ← optional step 3b output
 models/
   hoops_world_model_best.pth                ← step 4 output: lowest val loss
   hoops_world_model_best_f1.pth             ← step 4 output: highest val F1

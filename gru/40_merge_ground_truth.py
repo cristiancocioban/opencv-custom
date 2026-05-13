@@ -14,7 +14,8 @@ df['Hand_Touch'] = 0
 # 3. List the corrected XML files you downloaded from CVAT
 # Format: {'Video_ID_in_CSV': 'path_to_xml_file'}
 corrected_files = {
-    'crossover_02_05_1.mp4': '../data/bskt/cvat_exports/crossover_02_05_1_cvat_final.xml',
+    'crossover_11_05_01_fps30.mp4': '../data/bskt/cvat_exports/crossover_11_05_01_fps30_cvat_final.xml',
+    'crossover_11_05_02_fps30.mp4': '../data/bskt/cvat_exports/crossover_11_05_02_fps30_cvat_final.xml',    
     # Add your other videos here...
 }
 

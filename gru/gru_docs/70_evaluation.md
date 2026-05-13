@@ -14,7 +14,7 @@ a downstream consumer (e.g. a stats dashboard) will see.
 3. For each `Video_ID` group:
    - Counts ground-truth events from the soft labels (rising edges in
      `label ≥ 0.5`).
-   - Runs the model frame-by-frame on the 26 features (sliding window
+   - Runs the model frame-by-frame on the 31 features (sliding window
      of 15) to get per-frame probabilities.
    - Counts predicted events with **two** different counting algorithms,
      side by side: hysteresis (matches `90_test_inference.py`) and peak

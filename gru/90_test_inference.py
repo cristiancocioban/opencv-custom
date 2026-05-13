@@ -13,7 +13,7 @@ from collections import deque
 # 1. THE MODEL CLASS (Must match training exactly)
 # ==========================================
 class HoopsWorldModel(nn.Module):
-    def __init__(self, input_size=26, hidden_size=64, num_layers=2):
+    def __init__(self, input_size=31, hidden_size=64, num_layers=2):
         super(HoopsWorldModel, self).__init__()
         self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
         
@@ -41,9 +41,12 @@ class HoopsWorldModel(nn.Module):
 # 2. HELPER FUNCTIONS
 # ==========================================
 def safe_lm(landmarks, idx):
+    """Return (x, y, z, visibility) or None. MediaPipe's z is already
+    expressed relative to the hip mid-point (negative in front of the camera,
+    positive behind), so it does NOT need re-anchoring."""
     if landmarks is None: return None
     lm = landmarks[idx]
-    return float(lm.x), float(lm.y), float(lm.visibility)
+    return float(lm.x), float(lm.y), float(lm.z), float(lm.visibility)
 
 def avg_xy(a, b):
     if a is None or b is None: return None
@@ -139,7 +142,7 @@ def run_inference(video_path, yolo_path, pytorch_path, output_path,
     mp_draw = mp.solutions.drawing_utils
     
     # Load Your Trained Brain
-    model = HoopsWorldModel(input_size=26)
+    model = HoopsWorldModel(input_size=31)
     model.load_state_dict(torch.load(pytorch_path, weights_only=True))
     model.eval() # Set to evaluation mode (turns off dropout)
     print("Models Loaded Successfully!")
@@ -283,9 +286,26 @@ def run_inference(video_path, yolo_path, pytorch_path, output_path,
         if pose_res.pose_landmarks:
             mp_draw.draw_landmarks(frame, pose_res.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-        # 3. Build the 26-Feature Vector (index 25 is Ball_Detected)
-        features = [0.0] * 26
-        features[25] = 1.0 if ball_detected_now else 0.0
+        # 3. Build the 31-Feature Vector. Index map (kept in sync with
+        # FEATURE_COLS in 10_build_dribble_dataset.py):
+        #   0-1   Rel_Ball_X/Y
+        #   2-4   Rel_LeftElbow_X/Y/Vis
+        #   5-7   Rel_RightElbow_X/Y/Vis
+        #   8-11  Rel_LeftWrist_X/Y/Z/Vis    (Z added for trick-dribble cues)
+        #  12-15  Rel_RightWrist_X/Y/Z/Vis
+        #  16-18  Rel_LeftAnkle_X/Y/Vis
+        #  19-21  Rel_RightAnkle_X/Y/Vis
+        #  22     Norm_Torso_Height
+        #  23     Dist_Ball_L_Wrist
+        #  24     Dist_Ball_R_Wrist
+        #  25     Delta_Ball_Y
+        #  26     Delta_Ball_X
+        #  27     Left_Wrist_Behind          (1.0 if Rel_LeftWrist_Z  > 0.05)
+        #  28     Right_Wrist_Behind         (1.0 if Rel_RightWrist_Z > 0.05)
+        #  29     Hands_Behind_Back_Count    (sum of the two above; 0/1/2)
+        #  30     Ball_Detected              (1.0 if detector found ball)
+        features = [0.0] * 31
+        features[30] = 1.0 if ball_detected_now else 0.0
 
         hip_center = None
         if lms:
@@ -294,46 +314,60 @@ def run_inference(video_path, yolo_path, pytorch_path, output_path,
 
             if hip_center:
                 hcx, hcy = hip_center
-                
-                def rel(lm): return (lm[0]-hcx, lm[1]-hcy, lm[2]) if lm else (0.0, 0.0, 0.0)
+
+                def rel_xyv(lm):
+                    """(x - hip_x, y - hip_y, visibility) for landmarks
+                    we don't store depth for."""
+                    return (lm[0]-hcx, lm[1]-hcy, lm[3]) if lm else (0.0, 0.0, 0.0)
+
+                def rel_xyzv(lm):
+                    """(x - hip_x, y - hip_y, z, visibility). MediaPipe's z
+                    is already hip-relative — do NOT subtract hcz."""
+                    return (lm[0]-hcx, lm[1]-hcy, lm[2], lm[3]) if lm else (0.0, 0.0, 0.0, 0.0)
 
                 if ball_norm:
                     features[0], features[1] = ball_norm[0]-hcx, ball_norm[1]-hcy
-                
-                features[2:5] = rel(safe_lm(lms, idxs['LELB']))
-                features[5:8] = rel(safe_lm(lms, idxs['RELB']))
-                
+
+                features[2:5] = rel_xyv(safe_lm(lms, idxs['LELB']))
+                features[5:8] = rel_xyv(safe_lm(lms, idxs['RELB']))
+
                 # We need to save the wrists to variables so we can calculate distance!
-                l_wrist = rel(safe_lm(lms, idxs['LWR']))
-                r_wrist = rel(safe_lm(lms, idxs['RWR']))
-                
-                features[8:11] = l_wrist
-                features[11:14] = r_wrist
-                features[14:17] = rel(safe_lm(lms, idxs['LANK']))
-                features[17:20] = rel(safe_lm(lms, idxs['RANK']))
-                
+                l_wrist = rel_xyzv(safe_lm(lms, idxs['LWR']))
+                r_wrist = rel_xyzv(safe_lm(lms, idxs['RWR']))
+
+                features[8:12]  = l_wrist
+                features[12:16] = r_wrist
+                features[16:19] = rel_xyv(safe_lm(lms, idxs['LANK']))
+                features[19:22] = rel_xyv(safe_lm(lms, idxs['RANK']))
+
                 lsh, rsh = safe_lm(lms, idxs['LSH']), safe_lm(lms, idxs['RSH'])
                 sh_center = avg_xy(lsh, rsh)
-                if sh_center: features[20] = abs(sh_center[1] - hcy)
-                
+                if sh_center: features[22] = abs(sh_center[1] - hcy)
+
                 # --- NEW MATH FEATURES ---
                 # Dist_Ball_L_Wrist
-                features[21] = np.sqrt((features[0] - l_wrist[0])**2 + (features[1] - l_wrist[1])**2)
+                features[23] = np.sqrt((features[0] - l_wrist[0])**2 + (features[1] - l_wrist[1])**2)
                 # Dist_Ball_R_Wrist
-                features[22] = np.sqrt((features[0] - r_wrist[0])**2 + (features[1] - r_wrist[1])**2)
-                
+                features[24] = np.sqrt((features[0] - r_wrist[0])**2 + (features[1] - r_wrist[1])**2)
+
                 # Delta_Ball_Y (Current Y - Previous frame's Y from the memory bank)
                 if len(window) > 0:
                     previous_y = window[-1][1] # Get Rel_Ball_Y from the last frame in the deque
-                    features[23] = features[1] - previous_y
+                    features[25] = features[1] - previous_y
                 else:
-                    features[23] = 0.0 # First frame has no velocity
+                    features[25] = 0.0 # First frame has no velocity
                 # Delta_Ball_X (Current X - Previous frame's X from the memory bank)
                 if len(window) > 0:
                     previous_x = window[-1][0] # Get Rel_Ball_X from the last frame in the deque
-                    features[24] = features[0] - previous_x
+                    features[26] = features[0] - previous_x
                 else:
-                    features[24] = 0.0 # First frame has no velocity
+                    features[26] = 0.0 # First frame has no velocity
+
+                # Discrete behind-back indicators. Threshold matches
+                # inject_derived_features in 10_build_dribble_dataset.py.
+                features[27] = 1.0 if l_wrist[2] > 0.05 else 0.0
+                features[28] = 1.0 if r_wrist[2] > 0.05 else 0.0
+                features[29] = features[27] + features[28]
 
         # 4. Add to Memory Bank
         window.append(features)
@@ -466,7 +500,7 @@ def run_inference(video_path, yolo_path, pytorch_path, output_path,
 if __name__ == "__main__":
     # --- CHANGE THESE PATHS TO MATCH YOUR FILES ---
     # TEST_VIDEO can be a local path OR a YouTube URL (requires: pip install yt-dlp)
-    TEST_VIDEO = "../raw_dribbling_videos/crossover_02_05_1.mp4"
+    TEST_VIDEO = "../raw_dribbling_videos/crossover_11_05_02_fps30.mp4"
     # TEST_VIDEO = "https://www.youtube.com/watch?v=oADaM2L1YLc"
     # TEST_VIDEO = "https://www.youtube.com/shorts/EK34qP2XWFM"
 
@@ -479,8 +513,8 @@ if __name__ == "__main__":
     NANO_BACKBONE = "../models/nanotrack_backbone_sim_v2.onnx"
     NANO_NECKHEAD = "../models/nanotrack_head_sim_v2.onnx"
 
-    PYTORCH_WEIGHTS = "../models/hoops_world_model_best.pth"
-    OUTPUT_VIDEO = "../raw_dribbling_videos/debug_videos/ai_crossover_02_05_1.mp4"
+    PYTORCH_WEIGHTS = "../models/hoops_world_model_best_f1.pth"
+    OUTPUT_VIDEO = "../raw_dribbling_videos/debug_videos/ai_crossover_11_05_02_fps30.mp4"
 
     run_inference(
         TEST_VIDEO, YOLO_WEIGHTS, PYTORCH_WEIGHTS, OUTPUT_VIDEO,
